@@ -1,11 +1,14 @@
 modules = ["python-3.12"]
-run = "sh start.sh"
+run = ["bash", "start.sh"]
 
 [nix]
 channel = "stable-24_05"
 
 [deployment]
-run = ["sh", "-c", "./start.sh"]
+build = [
+  "pip install --no-cache-dir gunicorn && pip install -r requirements.txt && chmod +x start.sh",
+]
+run = ["bash", "./start.sh"]
 
 [[ports]]
 localPort = 8080
