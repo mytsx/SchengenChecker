@@ -88,22 +88,18 @@ def check_appointments():
         response = requests.get(url, timeout=10)  # Zaman aşımı eklendi
         if response.status_code == 200:
             data = response.json()
-            for entry in data:
-                country = entry.get("mission_country", "Bilinmiyor")
-                appointment_date = entry.get("appointment_date")
-
-                if appointment_date:
-                    message = f"{country} için randevu tarihi: {appointment_date}"
+            if data:  # Eğer data boş değilse
+                for entry in data:
+                    country = entry.get("mission_country", "Bilinmiyor")
+                    appointment_date = entry.get("appointment_date")
+                    
+                    message = f"{country} için randevu tarihi: {appointment_date}" if appointment_date else f"{country} için mevcut randevu yok."
                     print(message)
-                    logging.info(message)  # Log dosyasına yaz
+                    logging.info(message)
                     log_to_db(message)
-                    if config.get("notification", True):
+                    
+                    if appointment_date and config.get("notification", True):
                         send_notification("Randevu Bulundu", message)
-                else:
-                    no_appointment_message = f"{country} için mevcut randevu yok."
-                    print(no_appointment_message)
-                    logging.info(no_appointment_message)  # Log dosyasına yaz
-                    log_to_db(no_appointment_message)
         else:
             error_message = f"Hata: {response.status_code}"
             print(error_message)
