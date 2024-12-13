@@ -2,3 +2,4 @@ requests
 plyer
 pytz
 flask
+replit>=3.3.0

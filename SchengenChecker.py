@@ -1,12 +1,13 @@
+
 import requests
 import json
 import time
 import logging
-import sqlite3
 import pytz
 from datetime import datetime
-from plyer import notification  # Masaüstü bildirimleri için gerekli
+from plyer import notification
 from custom_formatter import CustomFormatter
+from replit import db
 
 # Logger configurations
 logging.basicConfig(filename="appointment_logs.txt",
@@ -24,38 +25,14 @@ control_handler.setFormatter(custom_formatter)
 control_logger.addHandler(control_handler)
 control_logger.setLevel(logging.INFO)
 
-# Database setup
-DB_FILE = "logs.db"
-conn = sqlite3.connect(DB_FILE, check_same_thread=False)
-cursor = conn.cursor()
-
-# Create table if not exists
-# Create tables if not exist
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT NOT NULL,
-    message TEXT NOT NULL
-)
-""")
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS appointments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT NOT NULL,
-    message TEXT NOT NULL
-)
-""")
-conn.commit()
-
-
 def log_to_db(message):
-    tz = pytz.timezone("Europe/Istanbul")  # Türkiye saati
+    tz = pytz.timezone("Europe/Istanbul")
     timestamp = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute("INSERT INTO logs (timestamp, message) VALUES (?, ?)",
-                   (timestamp, message))
-    conn.commit()
-
+    
+    # Add to logs
+    logs = db.get("logs", [])
+    logs.append({"timestamp": timestamp, "message": message})
+    db["logs"] = logs[-100:]  # Keep last 100 logs
 
 # Config dosyasını yükle
 try:
@@ -68,24 +45,12 @@ except json.JSONDecodeError:
     print("config.json dosyasında bir hata var. Lütfen kontrol edin.")
     exit(1)
 
-try:
-    with open("config.json", "r", encoding="utf-8") as config_file:
-        config = json.load(config_file)
-except FileNotFoundError:
-    print("config.json dosyası bulunamadı. Lütfen oluşturun.")
-    exit(1)
-except json.JSONDecodeError:
-    print("config.json dosyasında bir hata var. Lütfen kontrol edin.")
-    exit(1)
-
-
 def check_appointments():
     url = "https://api.schengenvisaappointments.com/api/visa-list/?format=json"
     try:
         log_to_db("Kontrol başlatıldı.")
-        control_logger.info(
-            "Kontrol başlatıldı.")  # Kontrol başlangıcını logla
-        response = requests.get(url, timeout=10)  # Zaman aşımı eklendi
+        control_logger.info("Kontrol başlatıldı.")
+        response = requests.get(url, timeout=10)
         if response.status_code == 200:
             data = response.json()
             if data:  # Eğer data boş değilse
@@ -103,23 +68,21 @@ def check_appointments():
         else:
             error_message = f"Hata: {response.status_code}"
             print(error_message)
-            logging.error(error_message)  # Hataları da logla
+            logging.error(error_message)
             log_to_db(error_message)
     except requests.RequestException as e:
         error_message = f"İstek sırasında bir hata oluştu: {e}"
         print(error_message)
-        logging.error(error_message)  # Hataları da logla
+        logging.error(error_message)
         log_to_db(error_message)
-
 
 def send_notification(title, message):
     if config.get("notification", True):
         notification.notify(
             title=title,
             message=message,
-            timeout=10  # Bildirimin ekranda kalma süresi (saniye)
+            timeout=10
         )
-
 
 if __name__ == "__main__":
     while True:
