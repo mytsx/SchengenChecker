@@ -3,3 +3,4 @@ plyer
 pytz
 flask
 psycopg2-binary
+gunicorn

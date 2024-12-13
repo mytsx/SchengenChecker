@@ -44,6 +44,7 @@ An automated monitoring system built with **Python** to check for available Sche
   - `flask`: Web interface
   - `psycopg2-binary`: PostgreSQL integration
   - `pytz`: Timezone handling
+  - `gunicorn`: WSGI server for deploying Flask applications
 
 ---
 
