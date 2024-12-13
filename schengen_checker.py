@@ -1,20 +1,17 @@
 import requests
-import logging
 
 
 class SchengenChecker:
 
-    def __init__(self, config, control_logger, db):
+    def __init__(self, config, db):
         """
         SchengenChecker sınıfını başlatır.
 
         Args:
             config (dict): Uygulama yapılandırması.
-            control_logger (logging.Logger): Kontrol işlemleri için logger.
             db (Database): Veritabanı işlemleri için Database nesnesi.
         """
         self.config = config
-        self.control_logger = control_logger
         self.db = db
         self.url = "https://api.schengenvisaappointments.com/api/visa-list/?format=json"
 
@@ -22,7 +19,6 @@ class SchengenChecker:
         try:
             # Log kontrol başlangıcı
             self.db.log_to_table("logs", "Kontrol yapıldı.")
-            self.control_logger.info("Kontrol yapıldı.")
 
             # API isteği
             response = requests.get(self.url, timeout=10)
@@ -46,7 +42,6 @@ class SchengenChecker:
                     print(message)
 
                     # Loglama
-                    logging.info(message)
                     self.db.log_to_table("logs", message)
 
                     # Bildirim gönder
@@ -62,13 +57,11 @@ class SchengenChecker:
             else:
                 error_message = f"Hata: {response.status_code}"
                 print(error_message)
-                logging.error(error_message)
                 self.db.log_to_table("logs", error_message)
 
         except requests.RequestException as e:
             error_message = f"İstek sırasında bir hata oluştu: {e}"
             print(error_message)
-            logging.error(error_message)
             self.db.log_to_table("logs", error_message)
 
     def send_notification(self, title, message):

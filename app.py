@@ -2,7 +2,6 @@ from flask import Flask, render_template, jsonify
 from threading import Thread
 from database import Database
 from schengen_checker import SchengenChecker
-import logging
 import json
 import time
 
@@ -16,12 +15,8 @@ class ApplicationManager:
         # Database nesnesi
         self.db = Database()
 
-        # Logger ayarları
-        self.setup_logger()
-
         # SchengenChecker nesnesi
-        self.schengen_checker = SchengenChecker(self.config,
-                                                self.control_logger, self.db)
+        self.schengen_checker = SchengenChecker(self.config, self.db)
 
         # Flask uygulaması
         self.flask_app = Flask(__name__)
@@ -38,22 +33,6 @@ class ApplicationManager:
             print(
                 f"{config_file} dosyasında bir hata var. Lütfen kontrol edin.")
             exit(1)
-
-    def setup_logger(self):
-        logging.basicConfig(
-            filename="appointment_logs.txt",
-            level=logging.INFO,
-            format="%(asctime)s - %(levelname)s - %(message)s",
-            encoding="utf-8",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-        self.control_logger = logging.getLogger("control_logger")
-        control_handler = logging.FileHandler("control_times.txt",
-                                              encoding="utf-8")
-        control_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(message)s"))
-        self.control_logger.addHandler(control_handler)
-        self.control_logger.setLevel(logging.INFO)
 
     def add_flask_routes(self):
 
