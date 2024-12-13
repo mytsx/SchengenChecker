@@ -4,8 +4,6 @@ import time
 from plyer import notification  # Masaüstü bildirimleri için gerekli
 
 def check_appointments():
-    print("program çalıştı")
-    send_notification("program çalıştı", "program çalıştı")
     url = "https://api.schengenvisaappointments.com/api/visa-list/?format=json"
     try:
         response = requests.get(url, timeout=10)  # Zaman aşımı eklendi
