@@ -2,4 +2,4 @@ requests
 plyer
 pytz
 flask
-replit>=3.3.0
+psycopg2-binary

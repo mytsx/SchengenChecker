@@ -2,3 +2,4 @@
 appointment_logs.txt
 control_times.txt
 logs.db
+postgreconfig.json

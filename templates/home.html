@@ -4,62 +4,148 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Schengen Visa Logs</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1 { color: #333; }
-        .appointments { background-color: #e7f4e4; padding: 10px; margin-bottom: 20px; border: 1px solid #a4d4a2; }
-        .logs { background-color: #f9f9f9; padding: 10px; border: 1px solid #ddd; }
-        .log { margin-bottom: 5px; }
-        .timestamp { color: #888; font-size: 0.9em; }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .appointments {
+            background-color: #e9f7e9;
+            border: 1px solid #a2d4a2;
+        }
+        .responses {
+            background-color: #fff9e6;
+            border: 1px solid #f0d78c;
+        }
+        .logs {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        .log {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .timestamp {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .log-text {
+            margin: 5px 0 0 0;
+        }
     </style>
 </head>
 <body>
-    <h1>Schengen Visa Appointment Logs</h1>
+    <div class="container my-4">
+        <h1 class="text-center mb-4">Schengen Visa Appointment Logs</h1>
 
-    <div class="appointments">
-        <h2>Recent Appointments</h2>
-        <div id="recent-appointments">
-            Loading recent appointments...
+        <!-- Recent Appointments and Response Changes -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="section appointments">
+                    <h2 class="text-success">Recent Appointments</h2>
+                    <div id="recent-appointments">
+                        <div class="text-muted">Loading recent appointments...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="section responses">
+                    <h2 class="text-warning">Last 10 Response Changes</h2>
+                    <div id="response-changes">
+                        <div class="text-muted">Loading response changes...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- All Logs -->
+        <div class="row">
+            <div class="col-12">
+                <div class="section logs">
+                    <h2 class="text-secondary">All Logs</h2>
+                    <div id="all-logs">
+                        <div class="text-muted">Loading logs...</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="logs">
-        <h2>All Logs</h2>
-        <div id="all-logs">
-            Loading logs...
-        </div>
-    </div>
-
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function fetchLogsAndAppointments() {
-            fetch('/get_logs')
+        function fetchRecentAppointments() {
+            fetch('/get_recent_appointments')
                 .then(response => response.json())
                 .then(data => {
-                    // Update recent appointments
                     const recentAppointmentsDiv = document.getElementById('recent-appointments');
-                    if (data.recent_appointments.length > 0) {
-                        recentAppointmentsDiv.innerHTML = data.recent_appointments.map(log => `
+                    if (data.length > 0) {
+                        recentAppointmentsDiv.innerHTML = data.map(app => `
                             <div class="log">
-                                <span class="timestamp">${log[0]}</span>: ${log[1]}
+                                <span class="timestamp">${app.timestamp}</span>
+                                <div class="log-text">${app.message}</div>
                             </div>
                         `).join('');
                     } else {
-                        recentAppointmentsDiv.innerHTML = "<p>No recent appointments found.</p>";
+                        recentAppointmentsDiv.innerHTML = "<div class='text-muted'>No recent appointments found.</div>";
                     }
-
-                    // Update logs
-                    const logsDiv = document.getElementById('all-logs');
-                    logsDiv.innerHTML = data.logs.map(log => `
-                        <div class="log">
-                            <span class="timestamp">${log[0]}</span>: ${log[1]}
-                        </div>
-                    `).join('');
                 });
         }
 
-        // Fetch logs and appointments every 5 seconds
-        setInterval(fetchLogsAndAppointments, 5000);
-        fetchLogsAndAppointments(); // Initial fetch
+        function fetchResponses() {
+            fetch('/get_responses')
+                .then(response => response.json())
+                .then(data => {
+                    const responsesDiv = document.getElementById('response-changes');
+                    if (data.length > 0) {
+                        responsesDiv.innerHTML = data.map(res => `
+                            <div class="log">
+                                <span class="timestamp">${res.timestamp}</span>
+                                <pre class="log-text">${JSON.stringify(res.response, null, 2)}</pre>
+                            </div>
+                        `).join('');
+                    } else {
+                        responsesDiv.innerHTML = "<div class='text-muted'>No response changes found.</div>";
+                    }
+                });
+        }
+
+        function fetchLogs() {
+            fetch('/get_logs')
+                .then(response => response.json())
+                .then(data => {
+                    const logsDiv = document.getElementById('all-logs');
+                    if (data.length > 0) {
+                        logsDiv.innerHTML = data.map(log => `
+                            <div class="log">
+                                <span class="timestamp">${log.timestamp}</span>
+                                <div class="log-text">${log.message}</div>
+                            </div>
+                        `).join('');
+                    } else {
+                        logsDiv.innerHTML = "<div class='text-muted'>No logs available.</div>";
+                    }
+                });
+        }
+
+        // Fetch data every 10 seconds
+        setInterval(() => {
+            fetchRecentAppointments();
+            fetchResponses();
+            fetchLogs();
+        }, 10000);
+
+        // Initial fetch
+        fetchRecentAppointments();
+        fetchResponses();
+        fetchLogs();
     </script>
 </body>
 </html>
