@@ -1,6 +1,7 @@
-# app.py - Flask Application
-from flask import Flask, render_template_string
+from flask import Flask, render_template, jsonify
 import sqlite3
+import threading
+import time
 
 # Flask app setup
 app = Flask(__name__)
@@ -13,63 +14,31 @@ cursor = conn.cursor()
 
 @app.route("/")
 def home():
+    return render_template("home.html")
+
+
+@app.route("/get_logs")
+def get_logs():
     # Fetch logs from database
     cursor.execute(
         "SELECT timestamp, message FROM logs ORDER BY id DESC LIMIT 100")
     logs = cursor.fetchall()
 
-    # Separate important messages (e.g., appointments found)
-    appointments = [log for log in logs if "Randevu" in log[1]]
-    other_logs = [log for log in logs if "Randevu" not in log[1]]
+    # Fetch the last 5 appointments from a separate table
+    cursor.execute(
+        "SELECT timestamp, message FROM appointments ORDER BY id DESC LIMIT 5")
+    recent_appointments = cursor.fetchall()
 
-    # HTML template
-    html_template = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Schengen Visa Logs</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            h1 { color: #333; }
-            .appointments { background-color: #e7f4e4; padding: 10px; margin-bottom: 20px; border: 1px solid #a4d4a2; }
-            .logs { background-color: #f9f9f9; padding: 10px; border: 1px solid #ddd; }
-            .log { margin-bottom: 5px; }
-            .timestamp { color: #888; font-size: 0.9em; }
-        </style>
-    </head>
-    <body>
-        <h1>Schengen Visa Appointment Logs</h1>
-
-        <div class="appointments">
-            <h2>Found Appointments</h2>
-            {% if appointments %}
-                {% for log in appointments %}
-                    <div class="log">
-                        <span class="timestamp">{{ log[0] }}</span>: {{ log[1] }}
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p>No appointments found.</p>
-            {% endif %}
-        </div>
-
-        <div class="logs">
-            <h2>All Logs</h2>
-            {% for log in other_logs %}
-                <div class="log">
-                    <span class="timestamp">{{ log[0] }}</span>: {{ log[1] }}
-                </div>
-            {% endfor %}
-        </div>
-    </body>
-    </html>
-    """
-    return render_template_string(html_template,
-                                  appointments=appointments,
-                                  other_logs=other_logs)
+    return jsonify({"logs": logs, "recent_appointments": recent_appointments})
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=False)
+
+    def flask_app():
+        app.run(host="0.0.0.0", port=8080, debug=False)
+
+    threading.Thread(target=flask_app).start()
+
+    # Keep the main thread alive
+    while True:
+        time.sleep(1)

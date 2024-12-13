@@ -3,6 +3,8 @@ import json
 import time
 import logging
 import sqlite3
+import pytz
+from datetime import datetime
 from plyer import notification  # Masaüstü bildirimleri için gerekli
 from custom_formatter import CustomFormatter
 
@@ -28,8 +30,17 @@ conn = sqlite3.connect(DB_FILE, check_same_thread=False)
 cursor = conn.cursor()
 
 # Create table if not exists
+# Create tables if not exist
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT NOT NULL,
+    message TEXT NOT NULL
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS appointments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp TEXT NOT NULL,
     message TEXT NOT NULL
@@ -39,7 +50,8 @@ conn.commit()
 
 
 def log_to_db(message):
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    tz = pytz.timezone("Europe/Istanbul")  # Türkiye saati
+    timestamp = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute("INSERT INTO logs (timestamp, message) VALUES (?, ?)",
                    (timestamp, message))
     conn.commit()

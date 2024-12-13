@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schengen Visa Logs</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        .appointments { background-color: #e7f4e4; padding: 10px; margin-bottom: 20px; border: 1px solid #a4d4a2; }
+        .logs { background-color: #f9f9f9; padding: 10px; border: 1px solid #ddd; }
+        .log { margin-bottom: 5px; }
+        .timestamp { color: #888; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>Schengen Visa Appointment Logs</h1>
+
+    <div class="appointments">
+        <h2>Recent Appointments</h2>
+        <div id="recent-appointments">
+            Loading recent appointments...
+        </div>
+    </div>
+
+    <div class="logs">
+        <h2>All Logs</h2>
+        <div id="all-logs">
+            Loading logs...
+        </div>
+    </div>
+
+    <script>
+        function fetchLogsAndAppointments() {
+            fetch('/get_logs')
+                .then(response => response.json())
+                .then(data => {
+                    // Update recent appointments
+                    const recentAppointmentsDiv = document.getElementById('recent-appointments');
+                    if (data.recent_appointments.length > 0) {
+                        recentAppointmentsDiv.innerHTML = data.recent_appointments.map(log => `
+                            <div class="log">
+                                <span class="timestamp">${log[0]}</span>: ${log[1]}
+                            </div>
+                        `).join('');
+                    } else {
+                        recentAppointmentsDiv.innerHTML = "<p>No recent appointments found.</p>";
+                    }
+
+                    // Update logs
+                    const logsDiv = document.getElementById('all-logs');
+                    logsDiv.innerHTML = data.logs.map(log => `
+                        <div class="log">
+                            <span class="timestamp">${log[0]}</span>: ${log[1]}
+                        </div>
+                    `).join('');
+                });
+        }
+
+        // Fetch logs and appointments every 5 seconds
+        setInterval(fetchLogsAndAppointments, 5000);
+        fetchLogsAndAppointments(); // Initial fetch
+    </script>
+</body>
+</html>
