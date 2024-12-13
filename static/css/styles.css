@@ -1,0 +1,32 @@
+.section {
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.appointments {
+    background-color: #e9f7e9;
+    border: 1px solid #a2d4a2;
+}
+.responses {
+    background-color: #fff9e6;
+    border: 1px solid #f0d78c;
+}
+.logs {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+}
+.log {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 4px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.timestamp {
+    color: #666;
+    font-size: 0.9em;
+}
+.log-text {
+    margin: 5px 0 0 0;
+}

@@ -6,40 +6,8 @@
     <title>Schengen Visa Logs</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .section {
-            margin-bottom: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .appointments {
-            background-color: #e9f7e9;
-            border: 1px solid #a2d4a2;
-        }
-        .responses {
-            background-color: #fff9e6;
-            border: 1px solid #f0d78c;
-        }
-        .logs {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-        }
-        .log {
-            margin-bottom: 10px;
-            padding: 10px;
-            border-radius: 4px;
-            background-color: #ffffff;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .timestamp {
-            color: #666;
-            font-size: 0.9em;
-        }
-        .log-text {
-            margin: 5px 0 0 0;
-        }
-    </style>
+    <!-- Harici CSS -->
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
 </head>
 <body>
     <div class="container my-4">
@@ -80,72 +48,7 @@
 
     <!-- Bootstrap JS and Popper.js -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function fetchRecentAppointments() {
-            fetch('/get_recent_appointments')
-                .then(response => response.json())
-                .then(data => {
-                    const recentAppointmentsDiv = document.getElementById('recent-appointments');
-                    if (data.length > 0) {
-                        recentAppointmentsDiv.innerHTML = data.map(app => `
-                            <div class="log">
-                                <span class="timestamp">${app.timestamp}</span>
-                                <div class="log-text">${app.message}</div>
-                            </div>
-                        `).join('');
-                    } else {
-                        recentAppointmentsDiv.innerHTML = "<div class='text-muted'>No recent appointments found.</div>";
-                    }
-                });
-        }
-
-        function fetchResponses() {
-            fetch('/get_responses')
-                .then(response => response.json())
-                .then(data => {
-                    const responsesDiv = document.getElementById('response-changes');
-                    if (data.length > 0) {
-                        responsesDiv.innerHTML = data.map(res => `
-                            <div class="log">
-                                <span class="timestamp">${res.timestamp}</span>
-                                <pre class="log-text">${JSON.stringify(res.response, null, 2)}</pre>
-                            </div>
-                        `).join('');
-                    } else {
-                        responsesDiv.innerHTML = "<div class='text-muted'>No response changes found.</div>";
-                    }
-                });
-        }
-
-        function fetchLogs() {
-            fetch('/get_logs')
-                .then(response => response.json())
-                .then(data => {
-                    const logsDiv = document.getElementById('all-logs');
-                    if (data.length > 0) {
-                        logsDiv.innerHTML = data.map(log => `
-                            <div class="log">
-                                <span class="timestamp">${log.timestamp}</span>
-                                <div class="log-text">${log.message}</div>
-                            </div>
-                        `).join('');
-                    } else {
-                        logsDiv.innerHTML = "<div class='text-muted'>No logs available.</div>";
-                    }
-                });
-        }
-
-        // Fetch data every 10 seconds
-        setInterval(() => {
-            fetchRecentAppointments();
-            fetchResponses();
-            fetchLogs();
-        }, 10000);
-
-        // Initial fetch
-        fetchRecentAppointments();
-        fetchResponses();
-        fetchLogs();
-    </script>
+    <!-- Harici JS -->
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
 </body>
 </html>
