@@ -1,83 +1,96 @@
-from flask import Flask, render_template, jsonify, g
+from flask import Flask, render_template, jsonify
+from threading import Thread
+from database import Database
+from schengen_checker import SchengenChecker
+import logging
 import json
-import psycopg2
-
-# Flask app setup
-app = Flask(__name__)
-
-# PostgreSQL bağlantı ayarlarını dosyadan yükleyin
-try:
-    with open("postgreconfig.json", "r") as config_file:
-        DATABASE_CONFIG = json.load(config_file)
-except FileNotFoundError:
-    print(
-        "postgreconfig.json dosyası bulunamadı. Lütfen oluşturun ve gerekli bilgileri ekleyin."
-    )
-    exit(1)
-except json.JSONDecodeError:
-    print("postgreconfig.json dosyasında bir hata var. Lütfen kontrol edin.")
-    exit(1)
+import time
 
 
-def get_db_connection():
-    """Her istekte yeni bir veritabanı bağlantısı oluştur."""
-    if "db" not in g:
-        g.db = psycopg2.connect(**DATABASE_CONFIG)
-        g.cursor = g.db.cursor()
-    return g.cursor
+class ApplicationManager:
 
+    def __init__(self, config_file="config.json"):
+        # Config dosyasını yükle
+        self.config = self.load_config(config_file)
 
-@app.teardown_appcontext
-def close_db_connection(exception=None):
-    """İstek tamamlandığında veritabanı bağlantısını kapat."""
-    db = g.pop("db", None)
-    if db is not None:
-        db.close()
+        # Database nesnesi
+        self.db = Database()
 
+        # Logger ayarları
+        self.setup_logger()
 
-@app.route("/")
-def home():
-    return render_template("home.html")
+        # SchengenChecker nesnesi
+        self.schengen_checker = SchengenChecker(self.config,
+                                                self.control_logger, self.db)
 
+        # Flask uygulaması
+        self.flask_app = Flask(__name__)
+        self.add_flask_routes()
 
-@app.route("/get_recent_appointments")
-def get_recent_appointments():
-    cursor = get_db_connection()
-    cursor.execute(
-        "SELECT timestamp, message FROM appointments ORDER BY timestamp DESC LIMIT 10"
-    )
-    appointments = cursor.fetchall()
-    appointments_formatted = [{
-        "timestamp": app[0],
-        "message": app[1]
-    } for app in appointments]
-    return jsonify(appointments_formatted)
+    def load_config(self, config_file):
+        try:
+            with open(config_file, "r", encoding="utf-8") as file:
+                return json.load(file)
+        except FileNotFoundError:
+            print(f"{config_file} bulunamadı. Lütfen oluşturun.")
+            exit(1)
+        except json.JSONDecodeError:
+            print(
+                f"{config_file} dosyasında bir hata var. Lütfen kontrol edin.")
+            exit(1)
 
+    def setup_logger(self):
+        logging.basicConfig(
+            filename="appointment_logs.txt",
+            level=logging.INFO,
+            format="%(asctime)s - %(levelname)s - %(message)s",
+            encoding="utf-8",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        self.control_logger = logging.getLogger("control_logger")
+        control_handler = logging.FileHandler("control_times.txt",
+                                              encoding="utf-8")
+        control_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(message)s"))
+        self.control_logger.addHandler(control_handler)
+        self.control_logger.setLevel(logging.INFO)
 
-@app.route("/get_responses")
-def get_responses():
-    cursor = get_db_connection()
-    cursor.execute(
-        "SELECT timestamp, response FROM responses ORDER BY timestamp DESC LIMIT 10"
-    )
-    responses = cursor.fetchall()
-    responses_formatted = [{
-        "timestamp": res[0],
-        "response": res[1]
-    } for res in responses]
-    return jsonify(responses_formatted)
+    def add_flask_routes(self):
 
+        @self.flask_app.route("/")
+        def home():
+            return render_template("home.html")
 
-@app.route("/get_logs")
-def get_logs():
-    cursor = get_db_connection()
-    cursor.execute(
-        "SELECT timestamp, message FROM logs ORDER BY timestamp DESC LIMIT 100"
-    )
-    logs = cursor.fetchall()
-    logs_formatted = [{"timestamp": log[0], "message": log[1]} for log in logs]
-    return jsonify(logs_formatted)
+        @self.flask_app.route("/get_recent_appointments")
+        def get_recent_appointments():
+            data = self.db.fetch_table_data("appointments", 10)
+            return jsonify(data)
+
+        @self.flask_app.route("/get_responses")
+        def get_responses():
+            data = self.db.fetch_table_data("responses", 10, json_column=True)
+            return jsonify(data)
+
+        @self.flask_app.route("/get_logs")
+        def get_logs():
+            data = self.db.fetch_table_data("logs", 100)
+            return jsonify(data)
+
+    def run_flask_app(self):
+        self.flask_app.run(host="0.0.0.0", port=8080, debug=False)
+
+    def run_schengen_checker(self):
+        while True:
+            self.schengen_checker.check_appointments()
+            time.sleep(self.config.get("check_interval", 600))
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=False)
+    app_manager = ApplicationManager()
+
+    # Flask'i ayrı bir thread'de çalıştır
+    flask_thread = Thread(target=app_manager.run_flask_app)
+    flask_thread.start()
+
+    # SchengenChecker'ı çalıştır
+    app_manager.run_schengen_checker()
