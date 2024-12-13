@@ -1,154 +1,198 @@
-# Schengen Visa Appointment Checker
+# Schengen Visa Appointment Checker 🌍
 
-A Python-based application to monitor Schengen visa appointment availability and send desktop notifications when an appointment is found.
+An automated monitoring system built with **Python** to check for available Schengen visa appointments. It provides real-time notifications via a web dashboard, desktop notifications, and logs the data for analysis.
 
-## Features
-- Automatically checks for available Schengen visa appointments every 10 minutes (or configurable interval).
-- Sends desktop notifications with appointment details when an appointment is found.
-- Logs appointment availability, errors, and check timestamps to separate log files.
-  - `appointment_logs.txt`: Logs appointment details and errors.
-  - `control_times.txt`: Logs the times the script checks for appointments.
+---
 
-## Requirements
-- Python 3.7+ (ensure it is installed if running the script on a new machine).
-- Required Python libraries:
-  - `requests`
-  - `plyer`
+## 🏗️ **Features**
 
-## Installation
+✨ **Real-time Monitoring**  
+- Automatically checks Schengen visa appointment availability at configurable intervals.  
 
-### On a Computer Without Python Installed:
+📢 **Multi-channel Notifications**  
+- Desktop notifications for instant alerts.  
+- Web dashboard for real-time updates.  
+- Detailed logging of events.  
 
-1. **Install Python**:
-   - Download Python from the [official Python website](https://www.python.org/).
-   - Install Python and ensure the option "Add Python to PATH" is selected during installation.
+💾 **Data Persistence**  
+- Stores data in both **PostgreSQL** and **SQLite** for reliability and local access.  
+- Automatically prunes SQLite data to keep it lightweight (up to 5,000 records per table).
 
-2. **Download the Project**:
-   - Clone this repository or download it as a ZIP file and extract it:
-     ```bash
-     git clone <repository_url>
-     cd <repository_name>
-     ```
+🖥️ **Web Dashboard**  
+- Beautiful, responsive interface to track:
+  - Recent appointments.
+  - API response changes.
+  - Complete log history.
 
-3. **Install Required Libraries**:
-   - Open a terminal (or Command Prompt) and install the dependencies:
-     ```bash
-     pip install -r requirements.txt
-     ```
-     Alternatively, install them manually:
-     ```bash
-     pip install requests plyer
-     ```
+⚙️ **Configurable Settings**  
+- Easy-to-edit JSON files for notification preferences and check intervals.
 
-4. **Save the Script**:
-   - Ensure the script is saved as `SchengenChecker.py` (or any preferred name).
+---
 
-## Usage
+## 🛠️ **Tech Stack**
 
-Run the script using Python:
+- **Backend**: Python 3.7+
+- **Web Framework**: Flask
+- **Database**: PostgreSQL + SQLite
+- **Frontend**:  
+  - HTML5
+  - CSS3 (Bootstrap 5)
+  - JavaScript
+- **Dependencies**:  
+  - `requests`: API communication
+  - `plyer`: Desktop notifications
+  - `flask`: Web interface
+  - `psycopg2-binary`: PostgreSQL integration
+  - `pytz`: Timezone handling
 
-```bash
-python SchengenChecker.py
-```
+---
 
-The program will:
-1. Check for Schengen visa appointment availability using the specified API.
-2. Print availability information in the terminal.
-3. Send a desktop notification if an appointment is available.
-4. Log all relevant details in `appointment_logs.txt` and `control_times.txt`.
-5. Repeat the process every 10 minutes.
+## 🚀 **Getting Started**
 
-## Configuration
+### 🐍 **For Python Beginners**
 
-- **Interval**: The default interval is set to 10 minutes. You can change this by modifying the `time.sleep()` value in the code:
+1. **Install Python**:  
+   - Visit [Python.org's Beginner Guide](https://www.python.org/about/gettingstarted/).  
+   - Download and install Python 3.7 or newer.  
+   - During installation, ensure "Add Python to PATH" is checked.
 
-  ```python
-  time.sleep(600)  # Adjust the interval (in seconds)
-  ```
-
-- **API URL**: If the API URL changes, update the `url` variable:
-
-  ```python
-  url = "<new_api_endpoint>"
-  ```
-
-## Example Output
-
-**Console Output:**
-```bash
-Kontrol başlatıldı.
-France için randevu tarihi: 2024-12-15
-Germany için mevcut randevu yok.
-```
-
-**Desktop Notification:**
-- Title: `Randevu Bulundu`
-- Message: `France için randevu tarihi: 2024-12-15`
-
-## Log Files
-
-- `appointment_logs.txt`: Contains detailed logs of appointment availability and errors.
-- `control_times.txt`: Logs timestamps for when checks are performed.
-
-## Dependencies
-- **Requests**: To handle HTTP requests.
-- **Plyer**: For desktop notifications.
-
-Install dependencies using:
-```bash
-pip install requests plyer
-```
-
-## Notes
-- Ensure an active internet connection to fetch data from the API.
-- Desktop notifications may behave differently based on your operating system. For Windows, ensure system notifications are enabled.
-- Log files will be created in the same directory as the script.
-
-## Automatically Start on Boot
-
-To make the script run automatically when your computer starts:
-
-### Windows:
-1. **Create a Shortcut**:
-   - Right-click on the script or a `.bat` file that runs the script and create a shortcut.
-   - Move the shortcut to the `Startup` folder. Access it by pressing `Win + R`, typing `shell:startup`, and pressing Enter.
-
-2. **Create a `.bat` File**:
-   - Create a file named `start_script.bat` with the following content:
-     ```bat
-     @echo off
-     python "path\to\SchengenChecker.py"
-     pause
-     ```
-   - Replace `path\to\SchengenChecker.py` with the full path to your Python script.
-   - Place this `.bat` file in the `Startup` folder.
-
-3. **Optional**: Use Task Scheduler for more control.
-
-### macOS/Linux Users:
-1. **Create a Shell Script**:
-   - Create a file named `start_script.sh` with the following content:
-     ```bash
-     #!/bin/bash
-     python3 /path/to/SchengenChecker.py
-     ```
-   - Replace `/path/to/SchengenChecker.py` with the full path to your Python script.
-
-2. **Make the Script Executable**:
+2. **Install Dependencies**:  
    ```bash
-   chmod +x start_script.sh
+   pip install -r requirements.txt
    ```
 
-3. **Add to Startup Applications**:
-   - On Linux, add the script to your startup applications.
-   - On macOS, use `launchd` or another startup manager to run the script automatically.
+---
 
-## License
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+## ⚙️ **Configuration**
 
-## Contributing
-Contributions are welcome! If you'd like to improve this program, please fork the repository and submit a pull request.
+### Main Configuration (`config.json`)
+```json
+{
+  "notification": false,
+  "check_interval": 10
+}
+```
+- `notification`: Enable/disable desktop notifications.  
+- `check_interval`: Time between checks (in seconds).
 
-## Contact
-For any inquiries or issues, feel free to open an issue in the repository or contact the maintainer.
+### Database Configuration (`postgreconfig.json`)
+```json
+{
+  "host": "your_host",
+  "database": "your_db",
+  "user": "your_user",
+  "password": "your_password"
+}
+```
 
+---
+
+## 📁 **Project Structure**
+
+```
+├── static/                 # Static web assets
+│   ├── css/                # CSS styles
+│   └── js/                 # JavaScript files
+├── templates/              # HTML templates
+├── app.py                  # Flask web application
+├── checker_runner.py       # Main checker script
+├── config.json             # Main configuration file
+├── postgreconfig.json      # PostgreSQL configuration file
+├── database.py             # Database operations
+├── schengen_checker.py     # Core checking logic
+├── local_data.db           # SQLite database file
+├── requirements.txt        # Python dependencies
+```
+
+---
+
+## 💾 **Database Tables**
+
+### PostgreSQL
+- **`responses`**: Tracks API response changes.
+- **`logs`**: General application logs.
+- **`appointments`**: Stores appointment availability history.
+
+### SQLite (for local storage)
+- Same structure as PostgreSQL.
+- Automatically prunes older records, keeping only the last 5,000 entries per table.
+
+---
+
+## 🖥️ **Web Interface**
+
+### **Dashboard Features**
+Access the monitoring dashboard at `http://localhost:8080` after starting the application. It includes:
+- **Recent Appointments**: Displays the latest appointment availability.
+- **Response Changes**: Highlights changes in API responses.
+- **Complete Logs**: Detailed logs for debugging and analysis.
+- **Auto-refresh**: Updates every 10 seconds.
+
+---
+
+## 🔄 **Autostart Configuration**
+
+### **Windows**
+1. Create `start_schengen.bat`:
+   ```batch
+   @echo off
+   cd /d %~dp0
+   python checker_runner.py
+   ```
+2. Press `Win + R`, type `shell:startup`, and copy the batch file there.
+
+### **Linux/macOS**
+1. Create a service file:
+   ```bash
+   sudo nano /etc/systemd/system/schengen-checker.service
+   ```
+2. Add configuration:
+   ```ini
+   [Unit]
+   Description=Schengen Visa Checker
+   After=network.target
+
+   [Service]
+   ExecStart=/usr/bin/python3 /path/to/checker_runner.py
+   WorkingDirectory=/path/to/project
+   Restart=always
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+---
+
+## 🛡️ **Rate Limiting**
+
+The application implements responsible API usage:
+- Configurable check intervals (default: 10 seconds).
+- Built-in error handling for API failures.
+- Automatic retry mechanism with exponential backoff.
+
+---
+
+## 🤝 **Contributing**
+
+1. Fork the repository.  
+2. Create a feature branch.  
+3. Commit changes.  
+4. Push to the branch.  
+5. Create a Pull Request.
+
+---
+
+## 🆘 **Support**
+
+For support:
+1. Check existing issues.  
+2. Create a new issue with:
+   - Detailed description.  
+   - Steps to reproduce.  
+   - Expected vs actual behavior.
+
+---
+
+## 📄 **License**
+
+This project is licensed under the MIT License - see the `LICENSE` file for details.
