@@ -1,8 +1,12 @@
 modules = ["python-3.12"]
-run = "python SchengenChecker.py"
+run = "sh start.sh"
 
 [nix]
 channel = "stable-24_05"
 
 [deployment]
-run = ["sh", "-c", "Schengen"]
+run = ["sh", "-c", "./start.sh"]
+
+[[ports]]
+localPort = 8080
+externalPort = 80

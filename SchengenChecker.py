@@ -2,6 +2,7 @@ import requests
 import json
 import time
 import logging
+import sqlite3
 from plyer import notification  # Masaüstü bildirimleri için gerekli
 from custom_formatter import CustomFormatter
 
@@ -20,6 +21,29 @@ custom_formatter = CustomFormatter("%(asctime)s - %(message)s",
 control_handler.setFormatter(custom_formatter)
 control_logger.addHandler(control_handler)
 control_logger.setLevel(logging.INFO)
+
+# Database setup
+DB_FILE = "logs.db"
+conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+cursor = conn.cursor()
+
+# Create table if not exists
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT NOT NULL,
+    message TEXT NOT NULL
+)
+""")
+conn.commit()
+
+
+def log_to_db(message):
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("INSERT INTO logs (timestamp, message) VALUES (?, ?)",
+                   (timestamp, message))
+    conn.commit()
+
 
 # Config dosyasını yükle
 try:
@@ -46,6 +70,7 @@ except json.JSONDecodeError:
 def check_appointments():
     url = "https://api.schengenvisaappointments.com/api/visa-list/?format=json"
     try:
+        log_to_db("Kontrol başlatıldı.")
         control_logger.info(
             "Kontrol başlatıldı.")  # Kontrol başlangıcını logla
         response = requests.get(url, timeout=10)  # Zaman aşımı eklendi
@@ -59,20 +84,24 @@ def check_appointments():
                     message = f"{country} için randevu tarihi: {appointment_date}"
                     print(message)
                     logging.info(message)  # Log dosyasına yaz
+                    log_to_db(message)
                     if config.get("notification", True):
                         send_notification("Randevu Bulundu", message)
                 else:
                     no_appointment_message = f"{country} için mevcut randevu yok."
                     print(no_appointment_message)
                     logging.info(no_appointment_message)  # Log dosyasına yaz
+                    log_to_db(no_appointment_message)
         else:
             error_message = f"Hata: {response.status_code}"
             print(error_message)
             logging.error(error_message)  # Hataları da logla
+            log_to_db(error_message)
     except requests.RequestException as e:
         error_message = f"İstek sırasında bir hata oluştu: {e}"
         print(error_message)
         logging.error(error_message)  # Hataları da logla
+        log_to_db(error_message)
 
 
 def send_notification(title, message):

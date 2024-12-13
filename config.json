@@ -1,4 +1,4 @@
 {
   "notification": false,
-  "check_interval": 600
+  "check_interval": 300
 }
