@@ -1,6 +1,6 @@
 # Schengen Visa Appointment Checker 🌍
 
-An automated monitoring system built with **Python** to check for available Schengen visa appointments. It provides real-time notifications via a web dashboard, desktop notifications, and logs the data for analysis.
+An automated monitoring system built with **Python** to check for available Schengen visa appointments. It provides real-time notifications via a web dashboard, Telegram bot, and desktop notifications while logging the data for analysis.
 
 ---
 
@@ -10,7 +10,8 @@ An automated monitoring system built with **Python** to check for available Sche
 - Automatically checks Schengen visa appointment availability at configurable intervals.  
 
 📢 **Multi-channel Notifications**  
-- Desktop notifications for instant alerts.  
+- Desktop notifications for instant alerts.
+- Telegram notifications using a bot.    
 - Web dashboard for real-time updates.  
 - Detailed logging of events.  
 
@@ -25,9 +26,162 @@ An automated monitoring system built with **Python** to check for available Sche
   - Complete log history.
 
 ⚙️ **Configurable Settings**  
-- Easy-to-edit JSON files for notification preferences and check intervals.
+- All settings are managed through JSON configuration files stored in the `config` folder.
 
 ---
+
+## 🚀 **Getting Started**
+
+### **Setup Instructions**
+
+1. **Install Python**:  
+   - Visit [Python.org's Beginner Guide](https://www.python.org/about/gettingstarted/).  
+   - Download and install Python 3.7 or newer.  
+   - During installation, ensure "Add Python to PATH" is checked.
+
+2. **Clone the Repository:**
+   ```bash
+   git clone <repository_url>
+   cd <repository_folder>
+   ```
+
+3. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure the Application:**
+   - Update the configuration files in the `config` folder.
+   - See the "Configuration" section for details.
+
+5. **Start the Application:**
+   ```bash
+   bash start.sh
+   ```
+   
+   The application includes:
+   - A background process for monitoring visa appointments.
+   - A web server running at `http://localhost:8080`.
+
+---
+
+## ⚙️ **Configuration**
+
+All configuration files are located in the `config` folder. Update the relevant JSON files before running the application.
+
+### **Main Configuration (`config/config.json`)**
+```json
+{
+  "notification": true,
+  "check_interval": 600,
+  "desktop_notification": true,
+  "telegram_notification": true
+}
+```
+- `notification`: Enable/disable notifications globally.
+- `check_interval`: Time between checks (in seconds).
+- `desktop_notification`: Enable/disable desktop notifications.
+- `telegram_notification`: Enable/disable Telegram notifications.
+
+### **Telegram Bot Configuration (`config/telegram.json`)**
+```json
+{
+  "telegram_token": "YOUR_BOT_TOKEN",
+  "telegram_chat_id": "YOUR_CHAT_ID"
+}
+```
+- `telegram_token`: The bot token provided by [BotFather](https://t.me/BotFather).
+- `telegram_chat_id`: Your personal or group chat ID.
+
+### **Database Configuration (`config/database.json`)**
+```json
+{
+  "postgres": {
+    "dbname": "your_dbname",
+    "user": "your_user",
+    "password": "your_password",
+    "host": "your_host",
+    "port": 5432
+  },
+  "sqlite": {
+    "file": "local_data.db"
+  }
+}
+```
+- PostgreSQL is used for persistent storage.
+- SQLite is used as a lightweight local database.
+
+---
+
+## 🔀 **Telegram Bot Integration**
+
+### Steps to Set Up Telegram Bot
+
+1. **Create a Bot:**
+   - Open [BotFather](https://t.me/BotFather) on Telegram.
+   - Use the `/newbot` command to create a new bot.
+   - Save the provided bot token.
+
+2. **Get Your Chat ID:**
+   - Start a chat with your bot and send a message (e.g., `/start`).
+   - Visit `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates` to find your chat ID in the response.
+
+3. **Update `config/telegram.json`:**
+   ```json
+   {
+     "telegram_token": "YOUR_BOT_TOKEN",
+     "telegram_chat_id": "YOUR_CHAT_ID"
+   }
+   ```
+
+4. **Run the Application:**
+   - Ensure `telegram_notification` is enabled in `config/config.json`.
+
+The bot will now send appointment notifications to your Telegram chat.
+
+You can use it here: [SchengenCheckerBot](https://t.me/SchengenCheckerBot)
+
+---
+
+
+## 📚 **Project Structure**
+
+```
+project_root/
+├── config/                 # Configuration files
+│   ├── config.json         # Main application settings
+│   ├── telegram.json       # Telegram bot settings
+│   ├── database.json       # Database settings
+├── static/                 # Static web assets
+│   ├── css/                # CSS styles
+│   └── js/                 # JavaScript files
+├── templates/              # HTML templates
+├── app.py                  # Flask web application
+├── checker_runner.py       # Main checker script
+├── database.py             # Database operations
+├── schengen_checker.py     # Core checking logic
+├── telegram_bot.py         # Telegram bot integration
+├── config_loader.py        # Config file loader
+├── requirements.txt        # Python dependencies
+├── start.sh                # Startup script
+```
+
+---
+
+
+## 💾 **Database Tables**
+
+### PostgreSQL
+- **`responses`**: Tracks API response changes.
+- **`logs`**: General application logs.
+- **`appointments`**: Stores appointment availability history.
+
+### SQLite (for local storage)
+- Same structure as PostgreSQL.
+- Automatically prunes older records, keeping only the last 5,000 entries per table.
+
+---
+
 
 ## 🛠️ **Tech Stack**
 
@@ -48,86 +202,19 @@ An automated monitoring system built with **Python** to check for available Sche
 
 ---
 
-## 🚀 **Getting Started**
 
-### 🐍 **For Python Beginners**
-
-1. **Install Python**:  
-   - Visit [Python.org's Beginner Guide](https://www.python.org/about/gettingstarted/).  
-   - Download and install Python 3.7 or newer.  
-   - During installation, ensure "Add Python to PATH" is checked.
-
-2. **Install Dependencies**:  
-   ```bash
-   pip install -r requirements.txt
-   ```
-
----
-
-## ⚙️ **Configuration**
-
-### Main Configuration (`config.json`)
-```json
-{
-  "notification": false,
-  "check_interval": 10
-}
-```
-- `notification`: Enable/disable desktop notifications.  
-- `check_interval`: Time between checks (in seconds).
-
-### Database Configuration (`postgreconfig.json`)
-```json
-{
-  "host": "your_host",
-  "database": "your_db",
-  "user": "your_user",
-  "password": "your_password"
-}
-```
-
----
-
-## 📁 **Project Structure**
-
-```
-├── static/                 # Static web assets
-│   ├── css/                # CSS styles
-│   └── js/                 # JavaScript files
-├── templates/              # HTML templates
-├── app.py                  # Flask web application
-├── checker_runner.py       # Main checker script
-├── config.json             # Main configuration file
-├── postgreconfig.json      # PostgreSQL configuration file
-├── database.py             # Database operations
-├── schengen_checker.py     # Core checking logic
-├── local_data.db           # SQLite database file
-├── requirements.txt        # Python dependencies
-```
-
----
-
-## 💾 **Database Tables**
-
-### PostgreSQL
-- **`responses`**: Tracks API response changes.
-- **`logs`**: General application logs.
-- **`appointments`**: Stores appointment availability history.
-
-### SQLite (for local storage)
-- Same structure as PostgreSQL.
-- Automatically prunes older records, keeping only the last 5,000 entries per table.
-
----
-
-## 🖥️ **Web Interface**
+## 🔎 **Web Interface**
 
 ### **Dashboard Features**
-Access the monitoring dashboard at `http://localhost:8080` after starting the application. It includes:
+Access the monitoring dashboard at `http://localhost:8080`. It includes:
 - **Recent Appointments**: Displays the latest appointment availability.
 - **Response Changes**: Highlights changes in API responses.
 - **Complete Logs**: Detailed logs for debugging and analysis.
-- **Auto-refresh**: Updates every 10 seconds.
+
+### **Live Updates**
+- The dashboard auto-refreshes every 10 seconds using AJAX.
+
+You can also visit the live application here: [Schengen Checker Web Interface](https://schengen-checker-mytsx.replit.app/)
 
 ---
 
@@ -161,10 +248,15 @@ Access the monitoring dashboard at `http://localhost:8080` after starting the ap
    [Install]
    WantedBy=multi-user.target
    ```
+3. Enable and start the service:
+   ```bash
+   sudo systemctl enable schengen-checker
+   sudo systemctl start schengen-checker
+   ```
 
 ---
 
-## 🛡️ **Rate Limiting**
+## 🚧 **Rate Limiting**
 
 The application implements responsible API usage:
 - Configurable check intervals (default: 10 seconds).
@@ -173,7 +265,7 @@ The application implements responsible API usage:
 
 ---
 
-## 🤝 **Contributing**
+## 🙏 **Contributing**
 
 1. Fork the repository.  
 2. Create a feature branch.  
