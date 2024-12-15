@@ -1,9 +1,11 @@
 import requests
+from telegram_bot import TelegramBot
+from config_loader import ConfigLoader, ConfigWrapper
 
 
 class SchengenChecker:
 
-    def __init__(self, config, db):
+    def __init__(self, db, config_file="config.json"):
         """
         SchengenChecker sınıfını başlatır.
 
@@ -11,9 +13,12 @@ class SchengenChecker:
             config (dict): Uygulama yapılandırması.
             db (Database): Veritabanı işlemleri için Database nesnesi.
         """
-        self.config = config
+        config_data = ConfigLoader.load_config(config_file)
+        self.config = ConfigWrapper(config_data)
         self.db = db
         self.url = "https://api.schengenvisaappointments.com/api/visa-list/?format=json"
+
+        self.telegram_bot = TelegramBot()
 
     def check_appointments(self):
         try:
@@ -65,6 +70,10 @@ class SchengenChecker:
             self.db.log_to_table("logs", error_message)
 
     def send_notification(self, title, message):
-        if self.config.get("notification", True):
+        if self.config.get("desktop_notification", True):
             from plyer import notification
             notification.notify(title=title, message=message, timeout=10)
+
+        if self.config.get("telegram_notification", True):
+            telegram_message = f"{title}\n\n{message}"
+            self.telegram_bot.send_message(telegram_message)

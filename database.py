@@ -3,38 +3,30 @@ import sqlite3
 import json
 import pytz
 from datetime import datetime
+from config_loader import ConfigLoader, ConfigWrapper
 
 
 class Database:
 
-    def __init__(self,
-                 config_file="postgreconfig.json",
-                 sqlite_file="local_data.db"):
+    def __init__(self):
         """
-        Veritabanı sınıfını başlatır ve yapılandırma dosyasını yükler.
-
-        Args:
-            config_file (str): PostgreSQL bağlantı ayarlarını içeren dosya.
-            sqlite_file (str): SQLite dosyasının yolu.
+        Veritabanı sınıfını başlatır ve `config/database.json` dosyasını yükler.
         """
-        try:
-            with open(config_file, "r") as file:
-                self.config = json.load(file)
-        except FileNotFoundError:
-            print(f"{config_file} bulunamadı. Lütfen oluşturun.")
-            exit(1)
-        except json.JSONDecodeError:
-            print(
-                f"{config_file} dosyasında bir hata var. Lütfen kontrol edin.")
-            exit(1)
+        # Yapılandırma dosyasını yükle
+        database_config_data = ConfigLoader.load_config("database.json")
+        self.config = ConfigWrapper(database_config_data)
 
-        self.sqlite_file = sqlite_file
+        # PostgreSQL ve SQLite ayarlarını yükle
+        self.postgres_config = self.config.get("postgres", {})
+        self.sqlite_file = self.config.get("sqlite",
+                                           {}).get("file", "local_data.db")
+
         self.setup_sqlite()
 
     def connect_postgres(self):
         """PostgreSQL bağlantısı oluşturur ve döndürür."""
         try:
-            return psycopg2.connect(**self.config)
+            return psycopg2.connect(**self.postgres_config)
         except psycopg2.OperationalError as e:
             print(f"PostgreSQL bağlantısı başarısız: {e}")
             raise
