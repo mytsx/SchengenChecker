@@ -51,3 +51,18 @@
 .fixed-buttons .btn i {
     margin-right: 5px;
 }
+
+@media (max-width: 768px) {
+    .fixed-buttons {
+        bottom: 10px;
+        right: 10px;
+        flex-direction: row; /* Yatay dizilim */
+        gap: 10px; /* Butonlar arasında boşluk */
+    }
+
+    .fixed-buttons .btn {
+        font-size: 12px; /* Daha küçük font boyutu */
+        width: auto; /* Buton genişliği içeriğe göre ayarlanır */
+        padding: 5px 10px; /* Buton iç boşluğu küçültülür */
+    }
+}
