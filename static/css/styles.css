@@ -30,3 +30,24 @@
 .log-text {
     margin: 5px 0 0 0;
 }
+
+.fixed-buttons {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.fixed-buttons .btn {
+    margin-bottom: 10px;
+    width: 150px;
+    text-align: center;
+    font-size: 14px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.fixed-buttons .btn i {
+    margin-right: 5px;
+}
