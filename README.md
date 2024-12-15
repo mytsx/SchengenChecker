@@ -63,6 +63,9 @@ An automated monitoring system built with **Python** to check for available Sche
    - A background process for monitoring visa appointments.
    - A web server running at `http://localhost:8080`.
 
+> **Running on WSL?**  
+> Check the [WSL Setup Guide](./WSL%20Setup%20Guide.md) for detailed instructions on configuring and running the application on Windows Subsystem for Linux.
+
 ---
 
 ## ⚙️ **Configuration**
