@@ -1,9 +1,12 @@
+/* Genel Section Stili */
 .section {
     margin-bottom: 20px;
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
+
+/* Bölüm Renkleri */
 .appointments {
     background-color: #e9f7e9;
     border: 1px solid #a2d4a2;
@@ -16,6 +19,8 @@
     background-color: #f9f9f9;
     border: 1px solid #ddd;
 }
+
+/* Log Görünümü */
 .log {
     margin-bottom: 10px;
     padding: 10px;
@@ -31,6 +36,7 @@
     margin: 5px 0 0 0;
 }
 
+/* Sabit Butonlar */
 .fixed-buttons {
     position: fixed;
     bottom: 20px;
@@ -52,17 +58,18 @@
     margin-right: 5px;
 }
 
+/* Mobil Görünüm İçin Optimizasyon */
 @media (max-width: 768px) {
     .fixed-buttons {
         bottom: 10px;
         right: 10px;
-        flex-direction: row; /* Yatay dizilim */
-        gap: 10px; /* Butonlar arasında boşluk */
+        flex-direction: row; /* Yatay hizalama */
+        gap: 10px; /* Butonlar arası boşluk */
     }
 
     .fixed-buttons .btn {
-        font-size: 12px; /* Daha küçük font boyutu */
-        width: auto; /* Buton genişliği içeriğe göre ayarlanır */
-        padding: 5px 10px; /* Buton iç boşluğu küçültülür */
+        font-size: 12px; /* Küçük font boyutu */
+        width: auto; /* İçeriğe göre genişlik */
+        padding: 5px 8px; /* Buton iç boşluğu küçültülür */
     }
 }
