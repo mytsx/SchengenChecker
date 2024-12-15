@@ -43,11 +43,11 @@
     right: 20px;
     display: flex;
     flex-direction: column;
+    gap: 10px; /* Dikey butonlar arası boşluk */
     z-index: 1000;
 }
 
 .fixed-buttons .btn {
-    margin-bottom: 10px;
     width: 150px;
     text-align: center;
     font-size: 14px;
@@ -61,15 +61,18 @@
 /* Mobil Görünüm İçin Optimizasyon */
 @media (max-width: 768px) {
     .fixed-buttons {
-        bottom: 10px;
-        right: 10px;
-        flex-direction: row; /* Yatay hizalama */
+        position: static; /* Sabitlik kaldırılır */
+        margin: 10px auto; /* Sayfa ortasına hizalama */
+        display: flex;
+        flex-direction: row; /* Butonları yatay hizala */
+        flex-wrap: wrap; /* Gerekirse alt satıra geç */
+        justify-content: center; /* Butonları ortala */
         gap: 10px; /* Butonlar arası boşluk */
     }
 
     .fixed-buttons .btn {
-        font-size: 12px; /* Küçük font boyutu */
-        width: auto; /* İçeriğe göre genişlik */
-        padding: 5px 8px; /* Buton iç boşluğu küçültülür */
+        width: auto; /* Genişliği içeriğe göre ayarla */
+        font-size: 12px;
+        padding: 8px 12px; /* İç boşluk küçültülür */
     }
 }
