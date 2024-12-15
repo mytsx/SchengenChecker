@@ -55,10 +55,8 @@ class SchengenChecker:
                         self.db.log_to_table("appointments",
                                              appointment_message)
 
-                        # Bildirim gönder
-                        if self.config.get("notification", True):
-                            self.send_notification("Randevu Bulundu",
-                                                   appointment_message)
+                        self.send_notification("Randevu Bulundu",
+                                               appointment_message)
             else:
                 error_message = f"Hata: {response.status_code}"
                 print(error_message)
