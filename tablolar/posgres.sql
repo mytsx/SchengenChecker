@@ -49,3 +49,34 @@ CREATE TABLE IF NOT EXISTS processed_responses (
     processed_at TEXT NOT NULL,
     FOREIGN KEY (response_id) REFERENCES responses(id)
 );
+
+
+
+
+CREATE INDEX idx_appointment_logs_query
+    ON appointment_logs (unique_appointment_id, appointment_date, people_looking, last_checked);
+
+
+-- responses
+CREATE INDEX idx_responses_timestamp ON responses (timestamp);
+CREATE INDEX idx_responses_response_jsonb ON responses USING GIN (response);
+
+-- logs
+CREATE INDEX idx_logs_timestamp ON logs (timestamp);
+
+-- appointments
+CREATE INDEX idx_appointments_timestamp ON appointments (timestamp);
+
+-- unique_appointments
+CREATE INDEX idx_unique_appointments_center ON unique_appointments (center_name);
+CREATE INDEX idx_unique_appointments_visa ON unique_appointments (visa_type_id, visa_category, visa_subcategory);
+CREATE INDEX idx_unique_appointments_country ON unique_appointments (source_country, mission_country);
+
+-- appointment_logs
+CREATE INDEX idx_appointment_logs_unique_id ON appointment_logs (unique_appointment_id);
+CREATE INDEX idx_appointment_logs_date ON appointment_logs (appointment_date);
+CREATE INDEX idx_appointment_logs_last_checked ON appointment_logs (last_checked);
+
+-- processed_responses
+CREATE INDEX idx_processed_responses_response_id ON processed_responses (response_id);
+CREATE INDEX idx_processed_responses_timestamp ON processed_responses (timestamp);
