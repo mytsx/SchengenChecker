@@ -201,29 +201,55 @@ class PostgresDatabase:
         try:
             conn = self.connect()
             cursor = conn.cursor()
-            query = """
+
+            # Önce aynı kayıt var mı kontrol et
+            query_check = """
+            SELECT id FROM appointment_logs
+            WHERE unique_appointment_id = %s 
+            AND timestamp = %s 
+            AND appointment_date = %s 
+            AND people_looking = %s 
+            AND last_checked = %s;
+            """
+            timestamp = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            cursor.execute(query_check, (
+                data.get("unique_appointment_id"),
+                timestamp,
+                data.get("appointment_date"),
+                data.get("people_looking"),
+                data.get("last_checked")
+            ))
+            existing_log = cursor.fetchone()
+
+            if existing_log:
+                print(f"Log already exists with ID: {existing_log[0]}")
+                return  # Aynı kayıt varsa ekleme yapma
+
+            # Eğer kayıt yoksa, ekle
+            query_insert = """
             INSERT INTO appointment_logs (
                 unique_appointment_id, timestamp, appointment_date, people_looking, last_checked
             ) VALUES (%s, %s, %s, %s, %s)
             """
-            cursor.execute(
-                query, (data.get("unique_appointment_id"),
-                        data.get("timestamp",
-                                 datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-                        data.get("appointment_date"),
-                        data.get("people_looking"), data.get("last_checked")))
+            cursor.execute(query_insert, (
+                data.get("unique_appointment_id"),
+                timestamp,
+                data.get("appointment_date"),
+                data.get("people_looking"),
+                data.get("last_checked")
+            ))
             conn.commit()
 
-            # Fetch appointment data to include in the Telegram message
+            # Telegram mesajını gönder
             query_fetch = """
             SELECT ua.center_name, ua.visa_category, ua.visa_subcategory,
-                   ua.source_country, ua.mission_country, al.appointment_date
+                ua.source_country, ua.mission_country, al.appointment_date
             FROM unique_appointments ua
             JOIN appointment_logs al ON ua.id = al.unique_appointment_id
-            WHERE ua.id = %s
+            WHERE ua.id = %s 
             ORDER BY al.last_checked DESC LIMIT 1
             """
-            cursor.execute(query_fetch, (data.get("unique_appointment_id"), ))
+            cursor.execute(query_fetch, (data.get("unique_appointment_id"),))
             appointment = cursor.fetchone()
 
             if appointment:
@@ -240,6 +266,7 @@ class PostgresDatabase:
         finally:
             cursor.close()
             conn.close()
+
 
     def _process_response_for_appointments(self, response_data):
         """Processes a response entry and logs data into unique_appointments and appointment_logs."""

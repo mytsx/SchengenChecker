@@ -174,9 +174,16 @@ class SQLiteDatabase:
             # Check for existing entry
             query_select = """
             SELECT id FROM unique_appointments
-            WHERE visa_type_id = ? AND center_name = ? AND book_now_link = ?
+            WHERE visa_type_id = %s 
+            AND center_name = %s 
+            AND book_now_link = %s
+            AND visa_category = %s
+            AND visa_subcategory = %s
+            AND source_country = %s
+            AND mission_country = %s
             """
-            cursor.execute(query_select, (visa_type_id, center_name, book_now_link))
+            cursor.execute(query_select, (visa_type_id, center_name, book_now_link, visa_category,
+                                        visa_subcategory, source_country, mission_country))
             row = cursor.fetchone()
 
             if row:
@@ -202,29 +209,55 @@ class SQLiteDatabase:
 
     def insert_appointment_log(self, data):
         """
-        Insert an appointment log into the `appointment_logs` table.
+        Appointment log kaydını appointment_logs tablosuna ekler ve Telegram mesajı gönderir.
 
         Args:
-            data (dict): Log data.
+            data (dict): Log verisi.
         """
         try:
             conn = self.connect()
             cursor = conn.cursor()
-            query = """
+
+            # Önce aynı kayıt var mı kontrol et
+            query_check = """
+            SELECT id FROM appointment_logs
+            WHERE unique_appointment_id = %s 
+            AND timestamp = %s 
+            AND appointment_date = %s 
+            AND people_looking = %s 
+            AND last_checked = %s;
+            """
+            timestamp = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            cursor.execute(query_check, (
+                data.get("unique_appointment_id"),
+                timestamp,
+                data.get("appointment_date"),
+                data.get("people_looking"),
+                data.get("last_checked")
+            ))
+            existing_log = cursor.fetchone()
+
+            if existing_log:
+                print(f"Log already exists with ID: {existing_log[0]}")
+                return  # Aynı kayıt varsa ekleme yapma
+
+            # Eğer kayıt yoksa, ekle
+            query_insert = """
             INSERT INTO appointment_logs (
                 unique_appointment_id, timestamp, appointment_date, people_looking, last_checked
-            ) VALUES (?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s)
             """
-            cursor.execute(query, (
+            cursor.execute(query_insert, (
                 data.get("unique_appointment_id"),
-                data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                timestamp,
                 data.get("appointment_date"),
                 data.get("people_looking"),
                 data.get("last_checked")
             ))
             conn.commit()
+
         except Exception as e:
-            print(f"SQLite'e appointment log ekleme sırasında hata: {e}")
+            print(f"PostgreSQL'e log ekleme sırasında hata: {e}")
         finally:
             cursor.close()
             conn.close()
