@@ -14,7 +14,7 @@ class Database:
 
 
     def fetch_table_data(self, table_name, limit=10, json_column=False):
-        return self.sqliteDb(table_name,limit,json_column)
+        return self.sqliteDb.fetch_table_data(table_name,limit,json_column)
 
 
     def fetch_responses_from_postgres(self, limit=500):
