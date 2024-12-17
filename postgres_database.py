@@ -144,10 +144,17 @@ class PostgresDatabase:
             # Check for existing entry
             query_select = """
             SELECT id FROM unique_appointments
-            WHERE visa_type_id = %s AND center_name = %s AND book_now_link = %s
+            WHERE visa_type_id = %s 
+            AND center_name = %s 
+            AND book_now_link = %s
+            AND visa_category = %s
+            AND visa_subcategory = %s
+            AND source_country = %s
+            AND mission_country = %s
             """
-            cursor.execute(query_select,
-                           (visa_type_id, center_name, book_now_link))
+            cursor.execute(query_select, (visa_type_id, center_name, book_now_link, visa_category,
+                                        visa_subcategory, source_country, mission_country))
+
             row = cursor.fetchone()
 
             if row:
