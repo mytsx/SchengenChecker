@@ -205,7 +205,6 @@ class PostgresDatabase:
             query_check = """
             SELECT id FROM appointment_logs
             WHERE unique_appointment_id = %s 
-            AND timestamp = %s 
             AND appointment_date = %s 
             AND people_looking = %s 
             AND last_checked = %s;
