@@ -3,12 +3,15 @@ import json
 import pytz
 from datetime import datetime
 from config_loader import ConfigLoader, ConfigWrapper
+from telegram_bot import TelegramBot
 
 
 class PostgresDatabase:
+
     def __init__(self):
         database_config_data = ConfigLoader.load_config("postgres.json")
         self.config = ConfigWrapper(database_config_data).config_data
+        self.telegramBot = TelegramBot()
 
     def connect(self):
         try:
@@ -55,7 +58,6 @@ class PostgresDatabase:
             print(f"PostgreSQL'den tablo isimleri alınırken hata: {e}")
             return []
 
-
     def log_to_table(self, table_name, data):
         """Logs data into a PostgreSQL table and triggers additional actions for `responses`."""
         tz = pytz.timezone("Europe/Istanbul")
@@ -68,8 +70,7 @@ class PostgresDatabase:
             if table_name == "responses":
                 cursor.execute(
                     f"INSERT INTO {table_name} (timestamp, response) VALUES (%s, %s)",
-                    (timestamp, json.dumps(data))
-                )
+                    (timestamp, json.dumps(data)))
                 conn.commit()
 
                 # Process the inserted response for unique appointments and logs
@@ -78,8 +79,7 @@ class PostgresDatabase:
             elif table_name in ["logs", "appointments"]:
                 cursor.execute(
                     f"INSERT INTO {table_name} (timestamp, message) VALUES (%s, %s)",
-                    (timestamp, data)
-                )
+                    (timestamp, data))
                 conn.commit()
 
         except Exception as e:
@@ -87,7 +87,6 @@ class PostgresDatabase:
         finally:
             cursor.close()
             conn.close()
-
 
     def fetch_responses_from_postgres(self, limit=500):
         """
@@ -97,7 +96,7 @@ class PostgresDatabase:
         try:
             conn = self.connect()
             cursor = conn.cursor()
-            cursor.execute(query, (limit,))
+            cursor.execute(query, (limit, ))
             rows = cursor.fetchall()
             response_list = []
 
@@ -108,9 +107,15 @@ class PostgresDatabase:
 
                 if isinstance(response_data, list):
                     for record in response_data:
-                        response_list.append({"timestamp": timestamp, **record})
+                        response_list.append({
+                            "timestamp": timestamp,
+                            **record
+                        })
                 else:
-                    response_list.append({"timestamp": timestamp, "data": response_data})
+                    response_list.append({
+                        "timestamp": timestamp,
+                        "data": response_data
+                    })
 
             return response_list
         except Exception as e:
@@ -120,9 +125,15 @@ class PostgresDatabase:
             cursor.close()
             conn.close()
 
-    def fetch_or_create_unique_appointment(self, visa_type_id, center_name, book_now_link,
-                                           visa_category, visa_subcategory, source_country,
-                                           mission_country):
+    def fetch_or_create_unique_appointment(self,
+                                           visa_type_id,
+                                           center_name,
+                                           book_now_link,
+                                           visa_category,
+                                           visa_subcategory,
+                                           source_country,
+                                           mission_country,
+                                           appointment_date=None):
         """
         Check or create a unique appointment in PostgreSQL.
         """
@@ -135,7 +146,8 @@ class PostgresDatabase:
             SELECT id FROM unique_appointments
             WHERE visa_type_id = %s AND center_name = %s AND book_now_link = %s
             """
-            cursor.execute(query_select, (visa_type_id, center_name, book_now_link))
+            cursor.execute(query_select,
+                           (visa_type_id, center_name, book_now_link))
             row = cursor.fetchone()
 
             if row:
@@ -149,12 +161,24 @@ class PostgresDatabase:
             ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """
-            cursor.execute(query_insert, (center_name, visa_type_id, visa_category, visa_subcategory,
-                                          source_country, mission_country, book_now_link))
+            cursor.execute(
+                query_insert,
+                (center_name, visa_type_id, visa_category, visa_subcategory,
+                 source_country, mission_country, book_now_link))
             conn.commit()
+
+            appointment_date_text = f"\n- Appointment Date: {appointment_date}" if appointment_date else ""
+            message = (
+                f"🆕 New Appointment Added:\n- Center: {center_name}\n- Category: {visa_category}\n"
+                f"- Subcategory: {visa_subcategory}\n- Source: {source_country}\n"
+                f"- Destination: {mission_country}{appointment_date_text}")
+            self.telegramBot.send_message(message)
+
             return cursor.fetchone()[0]  # Return new ID
         except Exception as e:
-            print(f"Error creating or fetching unique appointment in PostgreSQL: {e}")
+            print(
+                f"Error creating or fetching unique appointment in PostgreSQL: {e}"
+            )
             return None
         finally:
             cursor.close()
@@ -162,7 +186,7 @@ class PostgresDatabase:
 
     def insert_appointment_log(self, data):
         """
-        Appointment log kaydını appointment_logs tablosuna ekler.
+        Appointment log kaydını appointment_logs tablosuna ekler ve Telegram mesajı gönderir.
 
         Args:
             data (dict): Log verisi.
@@ -175,20 +199,40 @@ class PostgresDatabase:
                 unique_appointment_id, timestamp, appointment_date, people_looking, last_checked
             ) VALUES (%s, %s, %s, %s, %s)
             """
-            cursor.execute(query, (
-                data.get("unique_appointment_id"),
-                data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-                data.get("appointment_date"),
-                data.get("people_looking"),
-                data.get("last_checked")
-            ))
+            cursor.execute(
+                query, (data.get("unique_appointment_id"),
+                        data.get("timestamp",
+                                 datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                        data.get("appointment_date"),
+                        data.get("people_looking"), data.get("last_checked")))
             conn.commit()
+
+            # Fetch appointment data to include in the Telegram message
+            query_fetch = """
+            SELECT ua.center_name, ua.visa_category, ua.visa_subcategory,
+                   ua.source_country, ua.mission_country, al.appointment_date
+            FROM unique_appointments ua
+            JOIN appointment_logs al ON ua.id = al.unique_appointment_id
+            WHERE ua.id = %s
+            ORDER BY al.last_checked DESC LIMIT 1
+            """
+            cursor.execute(query_fetch, (data.get("unique_appointment_id"), ))
+            appointment = cursor.fetchone()
+
+            if appointment:
+                center_name, visa_category, visa_subcategory, source_country, mission_country, appointment_date = appointment
+                message = (
+                    f"🔄 Appointment Log Updated:\n- Center: {center_name}\n- Category: {visa_category}\n"
+                    f"- Subcategory: {visa_subcategory}\n- Source: {source_country}\n"
+                    f"- Destination: {mission_country}\n- Appointment Date: {appointment_date}"
+                )
+                self.telegramBot.send_message(message)
+
         except Exception as e:
             print(f"PostgreSQL'e log ekleme sırasında hata: {e}")
         finally:
             cursor.close()
             conn.close()
-
 
     def _process_response_for_appointments(self, response_data):
         """Processes a response entry and logs data into unique_appointments and appointment_logs."""
@@ -213,22 +257,25 @@ class PostgresDatabase:
                     center_name=center_name,
                     book_now_link=book_now_link,
                     visa_category=entry.get("visa_category", "Bilinmiyor"),
-                    visa_subcategory=entry.get("visa_subcategory", "Bilinmiyor"),
+                    visa_subcategory=entry.get("visa_subcategory",
+                                               "Bilinmiyor"),
                     source_country=entry.get("source_country", "Bilinmiyor"),
-                    mission_country=entry.get("mission_country", "Bilinmiyor")
-                )
+                    mission_country=entry.get("mission_country", "Bilinmiyor"))
 
                 # Log to appointment_logs if a unique appointment is found or created
                 if unique_appointment_id:
                     self.insert_appointment_log({
-                        "unique_appointment_id": unique_appointment_id,
-                        "appointment_date": appointment_date,
-                        "people_looking": entry.get("people_looking", 0),
-                        "last_checked": entry.get("last_checked", None)
+                        "unique_appointment_id":
+                        unique_appointment_id,
+                        "appointment_date":
+                        appointment_date,
+                        "people_looking":
+                        entry.get("people_looking", 0),
+                        "last_checked":
+                        entry.get("last_checked", None)
                     })
         except Exception as e:
             print(f"Error processing responses for appointments: {e}")
-
 
     def insert_processed_response(self, response_id, timestamp):
         """
@@ -267,12 +314,13 @@ class PostgresDatabase:
             rows = cursor.fetchall()
             return rows
         except Exception as e:
-            print(f"PostgreSQL: İşlenmeyen responses kayıtları çekilirken hata: {e}")
+            print(
+                f"PostgreSQL: İşlenmeyen responses kayıtları çekilirken hata: {e}"
+            )
             return []
         finally:
             cursor.close()
             conn.close()
-
 
     def fetch_all_data(self, table_name):
         """
@@ -285,7 +333,9 @@ class PostgresDatabase:
             rows = cursor.fetchall()
             return rows
         except Exception as e:
-            print(f"PostgreSQL: {table_name} tablosundan veri çekilirken hata: {e}")
+            print(
+                f"PostgreSQL: {table_name} tablosundan veri çekilirken hata: {e}"
+            )
             return []
         finally:
             cursor.close()
