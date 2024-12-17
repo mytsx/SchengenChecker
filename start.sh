@@ -1,7 +1,8 @@
 #!/bin/bash
 
+echo "Şemalar senkronize ediliyor, veriler aktarılıyor..."
+python3 sync_database.py &
 
-# 3. Ana uygulamayı başlat
 echo "Checker runner başlatılıyor..."
 python3 checker_runner.py &
 
