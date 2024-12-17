@@ -1,31 +1,75 @@
-// Home Sayfası: Randevu Verilerini Getirme ve Gösterme
-function fetchAppointments() {
-    const center_name = document.getElementById('center_name').value;
-    const visa_category = document.getElementById('visa_category').value;
-    const appointment_date = document.getElementById('appointment_date').value;
+let dataTable;
 
-    fetch(`/get_filtered_appointments?center_name=${center_name}&visa_category=${visa_category}&appointment_date=${appointment_date}`)
-        .then(response => response.json())
-        .then(data => {
-            const tbody = document.getElementById('appointments-table-body');
-            tbody.innerHTML = "";  // Mevcut verileri temizle
-            data.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${row.center_name}</td>
-                    <td>${row.visa_category}</td>
-                    <td>${row.visa_subcategory || '-'}</td>
-                    <td>${row.source_country || '-'}</td>
-                    <td>${row.mission_country || '-'}</td>
-                    <td>${row.appointment_date || 'N/A'}</td>
-                    <td>${row.last_checked || 'N/A'}</td>
-                    <td>${row.people_looking || 0}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        })
-        .catch(err => console.error("Randevu verisi çekilirken hata: ", err));
+document.addEventListener("DOMContentLoaded", () => {
+    fetchDatalistOptions();
+    fetchAppointments();
+
+    // Enter tuşu ile arama
+    document.getElementById("filter-form").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            fetchAppointments();
+        }
+    });
+});
+
+function fetchDatalistOptions() {
+    const filters = ["center_name", "visa_category", "visa_subcategory", "source_country", "mission_country"];
+
+    filters.forEach(column => {
+        fetch(`/get_filter_options?column=${column}`)
+            .then(response => response.json())
+            .then(data => {
+                // Autocomplete için hazırla
+                $("#" + column).autocomplete({
+                    source: data,
+                    minLength: 0, // Tıklayınca tüm liste gelir
+                    autoFocus: true
+                }).focus(function () {
+                    $(this).autocomplete("search", ""); // Focus ile açılır
+                });
+            })
+            .catch(err => console.error(`Error fetching options for ${column}:`, err));
+    });
 }
 
-// Sayfa Yüklendiğinde Veriyi Getir
-document.addEventListener("DOMContentLoaded", fetchAppointments);
+function fetchAppointments() {
+    const params = new URLSearchParams({
+        center_name: document.getElementById("center_name").value,
+        visa_category: document.getElementById("visa_category").value,
+        visa_subcategory: document.getElementById("visa_subcategory").value,
+        source_country: document.getElementById("source_country").value,
+        mission_country: document.getElementById("mission_country").value
+    });
+
+    fetch(`/get_filtered_appointments?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            if (dataTable) {
+                dataTable.clear().rows.add(data).draw();
+            } else {
+                dataTable = $("#appointments-table").DataTable({
+                    data: data,
+                    columns: [
+                        { data: "center_name" },
+                        { data: "visa_category" },
+                        { data: "visa_subcategory", defaultContent: "-" },
+                        { data: "source_country", defaultContent: "-" },
+                        { data: "mission_country", defaultContent: "-" },
+                        { data: "appointment_date", defaultContent: "N/A" },
+                        { data: "last_checked", defaultContent: "N/A" },
+                        { data: "people_looking", defaultContent: 0 }
+                    ],
+                    responsive: true,
+                    pageLength: 10,
+                    order: [[6, "desc"]]
+                });
+            }
+        })
+        .catch(err => console.error("Error fetching appointments:", err));
+}
+
+function clearFilters() {
+    document.getElementById("filter-form").reset();
+    fetchAppointments();
+}

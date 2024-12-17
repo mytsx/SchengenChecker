@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify,request
+from flask import Flask, render_template, jsonify, request
 from database import Database
 
 
@@ -23,7 +23,6 @@ class SchengenCheckerApp:
         def log():
             return render_template("log.html")
 
-
         @self.flask_app.route("/get_recent_appointments")
         def get_recent_appointments():
             data = self.db.fetch_table_data("appointments", 10)
@@ -39,36 +38,78 @@ class SchengenCheckerApp:
             data = self.db.fetch_table_data("logs", 100)
             return jsonify(data)
 
+        @self.flask_app.route("/get_filter_options", methods=["GET"])
+        def get_filter_options():
+            """
+            Belirtilen sütuna göre filtreleme seçeneklerini döner.
+            """
+            column = request.args.get("column")
+            allowed_columns = [
+                "center_name", "visa_category", "visa_subcategory",
+                "source_country", "mission_country"
+            ]
+
+            if column not in allowed_columns:
+                return jsonify({"error": "Invalid column name"}), 400
+
+            query = f"SELECT DISTINCT {column} FROM unique_appointments ORDER BY {column}"
+
+            try:
+                conn = self.db.postgreDb.connect()
+                cursor = conn.cursor()
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                options = [row[0] for row in rows if row[0]]
+                return jsonify(options)
+            except Exception as e:
+                print(f"Error fetching filter options: {e}")
+                return jsonify({"error":
+                                "Failed to fetch filter options"}), 500
+            finally:
+                cursor.close()
+                conn.close()
+
         @self.flask_app.route("/get_filtered_appointments", methods=["GET"])
         def get_filtered_appointments():
             """
-            unique_appointments ve appointment_logs tablolarından filtrelenmiş verileri döner.
+            Filtrelere göre randevu verilerini döner.
             """
             center_name = request.args.get("center_name", default=None)
             visa_category = request.args.get("visa_category", default=None)
-            appointment_date = request.args.get("appointment_date", default=None)
+            visa_subcategory = request.args.get("visa_subcategory",
+                                                default=None)
+            source_country = request.args.get("source_country", default=None)
+            mission_country = request.args.get("mission_country", default=None)
 
             query = """
-            SELECT ua.center_name, ua.visa_category, ua.visa_subcategory, 
-                ua.source_country, ua.mission_country, al.appointment_date, 
-                al.people_looking, al.last_checked
+            SELECT ua.id AS unique_appointment_id, ua.center_name, ua.visa_category, ua.visa_subcategory,
+                   ua.source_country, ua.mission_country, MAX(al.appointment_date), MAX(al.last_checked), 
+                   MAX(al.people_looking)
             FROM unique_appointments ua
             LEFT JOIN appointment_logs al ON ua.id = al.unique_appointment_id
             WHERE 1=1
             """
             params = []
 
+            # Dinamik filtreleme
             if center_name:
                 query += " AND ua.center_name ILIKE %s"
                 params.append(f"%{center_name}%")
             if visa_category:
                 query += " AND ua.visa_category ILIKE %s"
                 params.append(f"%{visa_category}%")
-            if appointment_date:
-                query += " AND al.appointment_date = %s"
-                params.append(appointment_date)
+            if visa_subcategory:
+                query += " AND ua.visa_subcategory ILIKE %s"
+                params.append(f"%{visa_subcategory}%")
+            if source_country:
+                query += " AND ua.source_country ILIKE %s"
+                params.append(f"%{source_country}%")
+            if mission_country:
+                query += " AND ua.mission_country ILIKE %s"
+                params.append(f"%{mission_country}%")
 
-            query += " ORDER BY al.last_checked DESC LIMIT 100"
+            query += " GROUP BY ua.id, ua.center_name, ua.visa_category, ua.visa_subcategory, ua.source_country, ua.mission_country"
+            query += " ORDER BY MAX(al.last_checked) DESC LIMIT 100"
 
             try:
                 conn = self.db.postgreDb.connect()
@@ -76,30 +117,64 @@ class SchengenCheckerApp:
                 cursor.execute(query, params)
                 rows = cursor.fetchall()
 
-                data = [
-                    {
-                        "center_name": row[0],
-                        "visa_category": row[1],
-                        "visa_subcategory": row[2],
-                        "source_country": row[3],
-                        "mission_country": row[4],
-                        "appointment_date": row[5],
-                        "people_looking": row[6],
-                        "last_checked": row[7],
-                    }
-                    for row in rows
-                ]
+                data = [{
+                    "unique_appointment_id": row[0],
+                    "center_name": row[1],
+                    "visa_category": row[2],
+                    "visa_subcategory": row[3],
+                    "source_country": row[4],
+                    "mission_country": row[5],
+                    "appointment_date": row[6],
+                    "last_checked": row[7],
+                    "people_looking": row[8]
+                } for row in rows]
                 return jsonify(data)
             except Exception as e:
-                print(f"Error fetching filtered appointments: {e}")
-                return jsonify({"error": "Veriler getirilirken hata oluştu."})
+                print(f"Error fetching appointments: {e}")
+                return jsonify({"error": "Failed to fetch appointments"}), 500
             finally:
                 cursor.close()
                 conn.close()
 
+        @self.flask_app.route("/get_appointment_logs", methods=["GET"])
+        def get_appointment_logs():
+            """
+            Bir randevuya ait logların en güncel verilerini döner.
+            """
+            appointment_id = request.args.get("appointment_id")
 
+            query = """
+            SELECT appointment_date, people_looking, last_checked
+            FROM appointment_logs
+            WHERE unique_appointment_id = %s
+            ORDER BY last_checked DESC
+            LIMIT 1
+            """
 
+            try:
+                conn = self.db.postgreDb.connect()
+                cursor = conn.cursor()
+                cursor.execute(query, (appointment_id, ))
+                row = cursor.fetchone()
 
+                if row:
+                    data = {
+                        "appointment_date": row[0],
+                        "people_looking": row[1],
+                        "last_checked": row[2],
+                    }
+                else:
+                    data = {
+                        "message": "No logs available for this appointment."
+                    }
+
+                return jsonify(data)
+            except Exception as e:
+                print(f"Error fetching logs: {e}")
+                return jsonify({"error": "Failed to fetch logs"}), 500
+            finally:
+                cursor.close()
+                conn.close()
 
     def run_flask_app(self):
         self.flask_app.run(host="0.0.0.0", port=8080, debug=False)
