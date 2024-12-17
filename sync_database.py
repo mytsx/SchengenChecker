@@ -51,6 +51,63 @@ def sync_schemas_and_data():
             print(f"{table_name} için şema bulunamadı.")
 
     print("Tüm veriler başarıyla senkronize edildi.")
+    sync_indexes(postgres_db, sqlite_db)
+
+
+def sync_indexes(postgres_db, sqlite_db):
+    """
+    PostgreSQL'deki index'leri SQLite'a senkronize eder.
+    """
+    print("Index senkronizasyonu başlatılıyor...")
+
+    # PostgreSQL'den index bilgilerini al
+    index_query = """
+        SELECT 
+            tablename, 
+            indexname, 
+            indexdef
+        FROM 
+            pg_indexes 
+        WHERE 
+            schemaname = 'public';
+    """
+    try:
+        conn_pg = postgres_db.connect()
+        cursor_pg = conn_pg.cursor()
+        cursor_pg.execute(index_query)
+        indexes = cursor_pg.fetchall()
+
+        for tablename, indexname, indexdef in indexes:
+            print(f"Index bulundu: {indexname} ({tablename})")
+            
+            # PostgreSQL index tanımını SQLite'a dönüştür
+            # 'USING' gibi ifadeleri kaldır ve SQLite formatına dönüştür
+            sqlite_index_def = (
+                indexdef.replace("USING GIN", "")  # PostgreSQL özel index türünü kaldır
+                        .replace("USING BTREE", "")
+                        .replace("public.", "")
+                        .replace("USING btree", "")
+                        .replace("USING gin", "")
+            )
+
+            # CREATE INDEX ifadesini SQLite'a uygula
+            try:
+                conn_sqlite = sqlite_db.connect()
+                cursor_sqlite = conn_sqlite.cursor()
+                cursor_sqlite.execute(sqlite_index_def)
+                conn_sqlite.commit()
+                print(f"Index uygulandı: {indexname}")
+            except Exception as e:
+                print(f"SQLite index oluşturulurken hata: {e}")
+            finally:
+                cursor_sqlite.close()
+                conn_sqlite.close()
+                
+    except Exception as e:
+        print(f"PostgreSQL index bilgileri alınırken hata: {e}")
+    finally:
+        cursor_pg.close()
+        conn_pg.close()
 
 
 if __name__ == "__main__":
