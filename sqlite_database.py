@@ -162,34 +162,34 @@ class SQLiteDatabase:
             conn.close()
 
     def fetch_or_create_unique_appointment(self, visa_type_id, center_name, book_now_link,
-                                           visa_category, visa_subcategory, source_country,
-                                           mission_country):
+                                        visa_category, visa_subcategory, source_country,
+                                        mission_country):
         """
         Check or create a unique appointment in the SQLite database.
         """
         try:
-            conn = self.connect()
+            conn = self.connect()  # SQLite bağlantısı
             cursor = conn.cursor()
 
-            # Check for existing entry
+            # Mevcut kaydı kontrol et
             query_select = """
             SELECT id FROM unique_appointments
-            WHERE visa_type_id = %s 
-            AND center_name = %s 
-            AND book_now_link = %s
-            AND visa_category = %s
-            AND visa_subcategory = %s
-            AND source_country = %s
-            AND mission_country = %s
+            WHERE visa_type_id = ? 
+            AND center_name = ? 
+            AND book_now_link = ?
+            AND visa_category = ?
+            AND visa_subcategory = ?
+            AND source_country = ?
+            AND mission_country = ?
             """
             cursor.execute(query_select, (visa_type_id, center_name, book_now_link, visa_category,
                                         visa_subcategory, source_country, mission_country))
             row = cursor.fetchone()
 
             if row:
-                return row[0]  # Return existing ID
+                return row[0]  # Mevcut ID'yi döndür
 
-            # Insert new record
+            # Yeni kayıt ekle
             query_insert = """
             INSERT INTO unique_appointments (
                 center_name, visa_type_id, visa_category, visa_subcategory,
@@ -197,9 +197,10 @@ class SQLiteDatabase:
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """
             cursor.execute(query_insert, (center_name, visa_type_id, visa_category, visa_subcategory,
-                                          source_country, mission_country, book_now_link))
+                                        source_country, mission_country, book_now_link))
             conn.commit()
-            return cursor.lastrowid  # Return the ID of the new record
+            return cursor.lastrowid  # Yeni eklenen kaydın ID'sini döndür
+
         except Exception as e:
             print(f"SQLite fetch_or_create_unique_appointment error: {e}")
             return None
@@ -207,30 +208,28 @@ class SQLiteDatabase:
             cursor.close()
             conn.close()
 
+
     def insert_appointment_log(self, data):
         """
-        Appointment log kaydını appointment_logs tablosuna ekler ve Telegram mesajı gönderir.
+        Appointment log kaydını appointment_logs tablosuna ekler.
 
         Args:
             data (dict): Log verisi.
         """
         try:
-            conn = self.connect()
+            conn = self.connect()  # SQLite bağlantısı
             cursor = conn.cursor()
 
-            # Önce aynı kayıt var mı kontrol et
+            # Aynı kayıt var mı kontrol et
             query_check = """
             SELECT id FROM appointment_logs
-            WHERE unique_appointment_id = %s 
-            AND timestamp = %s 
-            AND appointment_date = %s 
-            AND people_looking = %s 
-            AND last_checked = %s;
+            WHERE unique_appointment_id = ? 
+            AND appointment_date = ? 
+            AND people_looking = ? 
+            AND last_checked = ?;
             """
-            timestamp = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             cursor.execute(query_check, (
                 data.get("unique_appointment_id"),
-                timestamp,
                 data.get("appointment_date"),
                 data.get("people_looking"),
                 data.get("last_checked")
@@ -239,13 +238,15 @@ class SQLiteDatabase:
 
             if existing_log:
                 print(f"Log already exists with ID: {existing_log[0]}")
-                return  # Aynı kayıt varsa ekleme yapma
+                return  # Kayıt zaten mevcut, ekleme yapılmaz
 
-            # Eğer kayıt yoksa, ekle
+            timestamp = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+            # Yeni kayıt ekle
             query_insert = """
             INSERT INTO appointment_logs (
                 unique_appointment_id, timestamp, appointment_date, people_looking, last_checked
-            ) VALUES (%s, %s, %s, %s, %s)
+            ) VALUES (?, ?, ?, ?, ?)
             """
             cursor.execute(query_insert, (
                 data.get("unique_appointment_id"),
@@ -257,10 +258,11 @@ class SQLiteDatabase:
             conn.commit()
 
         except Exception as e:
-            print(f"PostgreSQL'e log ekleme sırasında hata: {e}")
+            print(f"SQLite insert_appointment_log error: {e}")
         finally:
             cursor.close()
             conn.close()
+
 
 
     @staticmethod

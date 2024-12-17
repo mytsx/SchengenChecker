@@ -179,7 +179,6 @@ class PostgresDatabase:
                 f"🆕 New Appointment Added:\n- Center: {center_name}\n- Category: {visa_category}\n"
                 f"- Subcategory: {visa_subcategory}\n- Source: {source_country}\n"
                 f"- Destination: {mission_country}{appointment_date_text}")
-            self.telegramBot.send_message(message)
 
             return cursor.fetchone()[0]  # Return new ID
         except Exception as e:
@@ -211,10 +210,8 @@ class PostgresDatabase:
             AND people_looking = %s 
             AND last_checked = %s;
             """
-            timestamp = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             cursor.execute(query_check, (
                 data.get("unique_appointment_id"),
-                timestamp,
                 data.get("appointment_date"),
                 data.get("people_looking"),
                 data.get("last_checked")
@@ -224,6 +221,8 @@ class PostgresDatabase:
             if existing_log:
                 print(f"Log already exists with ID: {existing_log[0]}")
                 return  # Aynı kayıt varsa ekleme yapma
+
+            timestamp = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
             # Eğer kayıt yoksa, ekle
             query_insert = """
@@ -259,7 +258,6 @@ class PostgresDatabase:
                     f"- Subcategory: {visa_subcategory}\n- Source: {source_country}\n"
                     f"- Destination: {mission_country}\n- Appointment Date: {appointment_date}"
                 )
-                self.telegramBot.send_message(message)
 
         except Exception as e:
             print(f"PostgreSQL'e log ekleme sırasında hata: {e}")
