@@ -174,26 +174,9 @@ class PostgresDatabase:
                 source_country, mission_country, book_now_link)
             )
 
-            # Eğer yeni bir kayıt oluşturulmadıysa, mevcut ID'yi sorgula
             row = cursor.fetchone()
-            if not row:
-                query_select = """
-                SELECT id FROM unique_appointments
-                WHERE visa_type_id = %s 
-                AND center_name = %s 
-                AND book_now_link = %s
-                AND visa_category = %s
-                AND visa_subcategory = %s
-                AND source_country = %s
-                AND mission_country = %s
-                """
-                cursor.execute(query_select, (visa_type_id, center_name, book_now_link,
-                                            visa_category, visa_subcategory,
-                                            source_country, mission_country))
-                row = cursor.fetchone()
-
-            # Telegram mesajını oluştur
             if row:
+                conn.commit()  # Yeni kayıt oluşturulduysa commit yap
                 appointment_id = row[0]
                 appointment_date_text = f"\n- Appointment Date: {appointment_date}" if appointment_date else ""
                 message = (
@@ -201,7 +184,28 @@ class PostgresDatabase:
                     f"- Subcategory: {visa_subcategory}\n- Source: {source_country}\n"
                     f"- Destination: {mission_country}{appointment_date_text}")
                 self.telegramBot.send_message(message)
+
                 return appointment_id
+
+            query_select = """
+            SELECT id FROM unique_appointments
+            WHERE visa_type_id = %s 
+            AND center_name = %s 
+            AND book_now_link = %s
+            AND visa_category = %s
+            AND visa_subcategory = %s
+            AND source_country = %s
+            AND mission_country = %s
+            """
+            cursor.execute(query_select, (visa_type_id, center_name, book_now_link,
+                                        visa_category, visa_subcategory,
+                                        source_country, mission_country))
+            row = cursor.fetchone()
+            conn.commit()
+            if row:
+                return row[0]
+
+            return None
 
         except Exception as e:
             error_message = f"Error creating or fetching unique appointment: {e}"

@@ -109,7 +109,6 @@ class SchengenCheckerApp:
                 params.append(f"%{mission_country}%")
 
             query += " GROUP BY ua.id, ua.center_name, ua.visa_category, ua.visa_subcategory, ua.source_country, ua.mission_country"
-            query += " ORDER BY MAX(al.last_checked) DESC LIMIT 100"
 
             try:
                 conn = self.db.postgreDb.connect()

@@ -4,6 +4,7 @@ import pytz
 from datetime import datetime
 from config_loader import ConfigLoader, ConfigWrapper
 
+
 class SQLiteDatabase:
     def __init__(self):
 
@@ -29,7 +30,8 @@ class SQLiteDatabase:
         for column_name, data_type in schema:
             # ID sütunu için özel bir kontrol
             if column_name.lower() == "id":
-                column_definitions.append(f"{column_name} INTEGER PRIMARY KEY AUTOINCREMENT")
+                column_definitions.append(
+                    f"{column_name} INTEGER PRIMARY KEY AUTOINCREMENT")
             else:
                 # Diğer sütunlar için veri tipi dönüştürme
                 sqlite_type = self.map_postgres_to_sqlite(data_type)
@@ -54,7 +56,6 @@ class SQLiteDatabase:
             cursor.close()
             conn.close()
 
-
     def log_to_table(self, table_name, data):
         """Logs data into a SQLite table and triggers additional actions for `responses`."""
         tz = pytz.timezone("Europe/Istanbul")
@@ -66,14 +67,16 @@ class SQLiteDatabase:
             # Insert data into the specified table
             if table_name == "responses":
                 cursor.execute(
-                    f"INSERT INTO {table_name} (timestamp, response) VALUES (?, ?)",
+                    f"INSERT INTO {
+                        table_name} (timestamp, response) VALUES (?, ?)",
                     (timestamp, json.dumps(data))
                 )
                 conn.commit()
 
             elif table_name in ["logs", "appointments"]:
                 cursor.execute(
-                    f"INSERT INTO {table_name} (timestamp, message) VALUES (?, ?)",
+                    f"INSERT INTO {
+                        table_name} (timestamp, message) VALUES (?, ?)",
                     (timestamp, data)
                 )
                 conn.commit()
@@ -90,9 +93,11 @@ class SQLiteDatabase:
             conn = self.connect()
             cursor = conn.cursor()
             if json_column:
-                query = f"SELECT timestamp, response FROM {table_name} ORDER BY id DESC LIMIT ?"
+                query = f"SELECT timestamp, response FROM {
+                    table_name} ORDER BY id DESC LIMIT ?"
             else:
-                query = f"SELECT timestamp, message FROM {table_name} ORDER BY id DESC LIMIT ?"
+                query = f"SELECT timestamp, message FROM {
+                    table_name} ORDER BY id DESC LIMIT ?"
             cursor.execute(query, (limit,))
             rows = cursor.fetchall()
             if json_column:
@@ -124,7 +129,6 @@ class SQLiteDatabase:
             cursor.close()
             conn.close()
 
-
     def fetch_responses(self, table_name="responses", limit=500):
         """
         Fetch JSON responses from the 'responses' table in SQLite.
@@ -132,7 +136,8 @@ class SQLiteDatabase:
         try:
             conn = self.connect()
             cursor = conn.cursor()
-            query = f"SELECT timestamp, response FROM {table_name} ORDER BY id DESC LIMIT ?"
+            query = f"SELECT timestamp, response FROM {
+                table_name} ORDER BY id DESC LIMIT ?"
             cursor.execute(query, (limit,))
             rows = cursor.fetchall()
 
@@ -146,10 +151,12 @@ class SQLiteDatabase:
 
                 if isinstance(response_data, list):
                     for record in response_data:
-                        response_list.append({"timestamp": timestamp, **record})
+                        response_list.append(
+                            {"timestamp": timestamp, **record})
                 else:
-                    response_list.append({"timestamp": timestamp, "data": response_data})
-            
+                    response_list.append(
+                        {"timestamp": timestamp, "data": response_data})
+
             return response_list
         except Exception as e:
             print(f"SQLite fetch_responses error: {e}")
@@ -159,8 +166,8 @@ class SQLiteDatabase:
             conn.close()
 
     def fetch_or_create_unique_appointment(self, visa_type_id, center_name, book_now_link,
-                                        visa_category, visa_subcategory, source_country,
-                                        mission_country):
+                                           visa_category, visa_subcategory, source_country,
+                                           mission_country):
         """
         SQLite üzerinde benzersiz bir randevu kaydı oluşturur veya mevcut kaydı kontrol eder.
         """
@@ -177,7 +184,7 @@ class SQLiteDatabase:
             ON CONFLICT DO NOTHING;
             """
             cursor.execute(query_upsert, (center_name, visa_type_id, visa_category, visa_subcategory,
-                                        source_country, mission_country, book_now_link))
+                                          source_country, mission_country, book_now_link))
             conn.commit()
 
             # Eğer ekleme yapılmadıysa mevcut kaydı döndür
@@ -192,7 +199,7 @@ class SQLiteDatabase:
             AND mission_country = ?
             """
             cursor.execute(query_select, (visa_type_id, center_name, book_now_link, visa_category,
-                                        visa_subcategory, source_country, mission_country))
+                                          visa_subcategory, source_country, mission_country))
             row = cursor.fetchone()
 
             return row[0] if row else None
@@ -203,47 +210,40 @@ class SQLiteDatabase:
             cursor.close()
             conn.close()
 
-
-
     def insert_appointment_log(self, data):
         """
         PostgreSQL'den gelen başarılı ekleme sonucuna göre SQLite üzerinde de appointment log kaydını ekler.
-        
+
         Args:
             data (dict): Log verisi.
         """
         try:
-            # PostgreSQL'de log ekleme
-            postgres_id = self.postgreDb.insert_appointment_log(data)
 
-            # Eğer PostgreSQL başarılı bir şekilde kayıt eklediyse SQLite'a da ekle
-            if postgres_id:
-                timestamp = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            timestamp = data.get(
+                "timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-                # SQLite'a direkt ekleme
-                conn = self.sqliteDb.connect()  # SQLite bağlantısı
-                cursor = conn.cursor()
+            conn = self.connect()   
+            cursor = conn.cursor()
 
-                query_insert = """
+            query_insert = """
                 INSERT INTO appointment_logs (
                     unique_appointment_id, timestamp, appointment_date, people_looking, last_checked
                 ) VALUES (?, ?, ?, ?, ?)
                 """
-                cursor.execute(query_insert, (
-                    data.get("unique_appointment_id"),
-                    timestamp,
-                    data.get("appointment_date"),
-                    data.get("people_looking"),
-                    data.get("last_checked")
-                ))
-                conn.commit()
+            cursor.execute(query_insert, (
+                data.get("unique_appointment_id"),
+                timestamp,
+                data.get("appointment_date"),
+                data.get("people_looking"),
+                data.get("last_checked")
+            ))
+            conn.commit()
 
         except Exception as e:
             print(f"Error in insert_appointment_log: {e}")
         finally:
             cursor.close()
             conn.close()
-
 
     @staticmethod
     def map_postgres_to_sqlite(data_type):
@@ -260,7 +260,8 @@ class SQLiteDatabase:
             "character varying": "TEXT",
             "varchar": "TEXT",
             "char": "TEXT",
-            "boolean": "INTEGER",  # SQLite'ta boolean 0 (False) veya 1 (True) olarak kullanılır
+            # SQLite'ta boolean 0 (False) veya 1 (True) olarak kullanılır
+            "boolean": "INTEGER",
             "date": "TEXT",  # Tarihleri TEXT olarak saklarız
             "timestamp without time zone": "TEXT",
             "timestamp with time zone": "TEXT",
@@ -271,9 +272,9 @@ class SQLiteDatabase:
             "numeric": "REAL",
             "decimal": "REAL"
         }
-        return mapping.get(data_type.lower(), "TEXT")  # Varsayılan olarak TEXT döner
+        # Varsayılan olarak TEXT döner
+        return mapping.get(data_type.lower(), "TEXT")
 
-    
     def insert_processed_response(self, response_id, timestamp):
         """
         İşlenmiş bir response kaydını 'processed_responses' tablosuna ekler.
@@ -311,7 +312,8 @@ class SQLiteDatabase:
             rows = cursor.fetchall()
             return rows
         except Exception as e:
-            print(f"SQLite: İşlenmeyen responses kayıtları çekilirken hata: {e}")
+            print(
+                f"SQLite: İşlenmeyen responses kayıtları çekilirken hata: {e}")
             return []
         finally:
             cursor.close()
@@ -329,17 +331,20 @@ class SQLiteDatabase:
 
             # Şemadan sütun isimlerini al
             column_names = [col[0] for col in schema]
-            
+
             # ID sütunu kontrolü: Eğer "id" varsa onu dışarıda bırak
             if "id" in column_names:
-                columns_without_id = [col for col in column_names if col.lower() != "id"]
+                columns_without_id = [
+                    col for col in column_names if col.lower() != "id"]
                 placeholders = ", ".join(["?" for _ in columns_without_id])
-                query = f"INSERT INTO {table_name} ({', '.join(columns_without_id)}) VALUES ({placeholders})"
+                query = f"INSERT INTO {table_name} ({', '.join(
+                    columns_without_id)}) VALUES ({placeholders})"
 
                 # ID sütunu hariç verileri JSON kontrolü ile dönüştür
                 processed_rows = [
                     tuple(
-                        json.dumps(value) if isinstance(value, (list, dict)) else value
+                        json.dumps(value) if isinstance(
+                            value, (list, dict)) else value
                         for i, value in enumerate(row) if column_names[i].lower() != "id"
                     )
                     for row in rows
@@ -350,7 +355,8 @@ class SQLiteDatabase:
                 query = f"INSERT INTO {table_name} VALUES ({placeholders})"
                 processed_rows = [
                     tuple(
-                        json.dumps(value) if isinstance(value, (list, dict)) else value
+                        json.dumps(value) if isinstance(
+                            value, (list, dict)) else value
                         for value in row
                     )
                     for row in rows
@@ -365,5 +371,3 @@ class SQLiteDatabase:
         finally:
             cursor.close()
             conn.close()
-
-
