@@ -4,7 +4,6 @@ import pytz
 from datetime import datetime
 from config_loader import ConfigLoader, ConfigWrapper
 from telegram_bot import TelegramBot
-from response_processor import ResponseProcessor
 
 
 class PostgresDatabase:
@@ -13,7 +12,6 @@ class PostgresDatabase:
         database_config_data = ConfigLoader.load_config("postgres.json")
         self.config = ConfigWrapper(database_config_data).config_data
         self.telegramBot = TelegramBot()
-        self.responseProcessor = ResponseProcessor()
 
     def connect(self):
         try:
@@ -74,9 +72,6 @@ class PostgresDatabase:
                     f"INSERT INTO {table_name} (timestamp, response) VALUES (%s, %s)",
                     (timestamp, json.dumps(data)))
                 conn.commit()
-
-                # Process the inserted response for unique appointments and logs
-                self.responseProcessor.process_unprocessed_responses(data)
 
             elif table_name in ["logs", "appointments"]:
                 cursor.execute(

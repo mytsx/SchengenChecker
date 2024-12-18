@@ -1,15 +1,24 @@
 from postgres_database import PostgresDatabase
 from sqlite_database import SQLiteDatabase
+from response_processor import ResponseProcessor
 
 class Database:
 
     def __init__(self):
         self.postgreDb = PostgresDatabase()
         self.sqliteDb = SQLiteDatabase()
+        self.responseProcessor = ResponseProcessor(self)
 
     def log_to_table(self, table_name, data):
+        """
+        Veriyi hem PostgreSQL hem de SQLite veritabanlarına loglar.
+        Eğer 'responses' tablosuna log eklenirse, işlem sonrası response'u işler.
+        """
         self.postgreDb.log_to_table(table_name, data)
         self.sqliteDb.log_to_table(table_name, data)
+
+        if table_name == "responses":
+            self.responseProcessor.process_unprocessed_responses(data)
 
     def fetch_table_data(self, table_name, limit=10, json_column=False):
         return self.sqliteDb.fetch_table_data(table_name, limit, json_column)
