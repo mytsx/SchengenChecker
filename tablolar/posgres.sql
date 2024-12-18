@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS processed_responses (
 
 
 
-
 CREATE INDEX idx_appointment_logs_query
     ON appointment_logs (unique_appointment_id, appointment_date, people_looking, last_checked);
 
@@ -80,3 +79,13 @@ CREATE INDEX idx_appointment_logs_last_checked ON appointment_logs (last_checked
 -- processed_responses
 CREATE INDEX idx_processed_responses_response_id ON processed_responses (response_id);
 CREATE INDEX idx_processed_responses_timestamp ON processed_responses (timestamp);
+
+
+ALTER TABLE appointment_logs ADD CONSTRAINT unique_appointment_log
+    UNIQUE (unique_appointment_id, appointment_date, people_looking, last_checked);
+
+
+ALTER TABLE unique_appointments DROP CONSTRAINT unique_visa_appointment;
+
+ALTER TABLE unique_appointments ADD CONSTRAINT unique_visa_appointment
+UNIQUE (visa_type_id, center_name, visa_category, visa_subcategory, source_country, mission_country);
