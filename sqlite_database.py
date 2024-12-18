@@ -71,9 +71,6 @@ class SQLiteDatabase:
                 )
                 conn.commit()
 
-                # Process the inserted response for unique appointments and logs
-                self._process_response_for_appointments(data)
-
             elif table_name in ["logs", "appointments"]:
                 cursor.execute(
                     f"INSERT INTO {table_name} (timestamp, message) VALUES (?, ?)",
@@ -248,8 +245,6 @@ class SQLiteDatabase:
             conn.close()
 
 
-
-
     @staticmethod
     def map_postgres_to_sqlite(data_type):
         """
@@ -279,47 +274,6 @@ class SQLiteDatabase:
         return mapping.get(data_type.lower(), "TEXT")  # Varsayılan olarak TEXT döner
 
     
-
-    def _process_response_for_appointments(self, response_data):
-        """Processes a response entry and logs data into unique_appointments and appointment_logs."""
-        try:
-            # Parse JSON response if necessary
-            if isinstance(response_data, str):
-                response_data = json.loads(response_data)
-
-            for entry in response_data:
-                visa_type_id = entry.get("visa_type_id")
-                appointment_date = entry.get("appointment_date")
-                center_name = entry.get("center_name")
-                book_now_link = entry.get("book_now_link")
-
-                # Skip entries with missing critical data
-                if not visa_type_id or not center_name or not book_now_link:
-                    continue
-
-                # Check or create a unique appointment
-                unique_appointment_id = self.fetch_or_create_unique_appointment(
-                    visa_type_id=visa_type_id,
-                    center_name=center_name,
-                    book_now_link=book_now_link,
-                    visa_category=entry.get("visa_category", "Bilinmiyor"),
-                    visa_subcategory=entry.get("visa_subcategory", "Bilinmiyor"),
-                    source_country=entry.get("source_country", "Bilinmiyor"),
-                    mission_country=entry.get("mission_country", "Bilinmiyor")
-                )
-
-                # Log to appointment_logs if a unique appointment is found or created
-                if unique_appointment_id:
-                    self.insert_appointment_log({
-                        "unique_appointment_id": unique_appointment_id,
-                        "appointment_date": appointment_date,
-                        "people_looking": entry.get("people_looking", 0),
-                        "last_checked": entry.get("last_checked", None)
-                    })
-        except Exception as e:
-            print(f"Error processing responses for appointments: {e}")
-
-
     def insert_processed_response(self, response_id, timestamp):
         """
         İşlenmiş bir response kaydını 'processed_responses' tablosuna ekler.
