@@ -89,6 +89,6 @@ class Database:
         self.postgreDb.insert_processed_response(response_id, timestamp)
         self.sqliteDb.insert_processed_response(response_id, timestamp)
 
-if __name__ == "__main__":
-    db = Database()
-    db.responseProcessor.process_all_unprocessed_responses()
+# if __name__ == "__main__":
+#     db = Database()
+#     db.responseProcessor.process_all_unprocessed_responses()
