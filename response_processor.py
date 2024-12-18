@@ -1,41 +1,27 @@
 import json
-
 class ResponseProcessor:
-    def __init__(self, db):
+    def __init__(self, db ):
         """
         ResponseProcessor sınıfını başlatır ve Database nesnesini oluşturur.
         """
         self.db = db
-
     def process_unprocessed_responses(self, data):
         """
         Gelen response verilerini işler ve her iki veritabanına yazar.
 
         Args:
-            data (list): İşlenecek response verileri.
+            data (list[dict]): İşlenecek response verileri.
         """
         if not data:
             print("İşlenecek response verisi bulunamadı.")
             return
 
-        for response_id, timestamp, response_data in data:
+        for entry in data:
             try:
-                # response_data'nın türünü kontrol et
-                if isinstance(response_data, str):
-                    response_data = json.loads(response_data)
-                elif not isinstance(response_data, list):
-                    print(f"Beklenmeyen response_data türü: {type(response_data)}")
-                    continue
-
-                for entry in response_data:
-                    self.process_single_entry(entry)
-
-                # İşlenen response'u her iki veritabanına ekle
-                self.db.insert_processed_response(response_id, timestamp)
-
-                print(f"POSTGRESQL & SQLITE: Response ID {response_id} işlendi ve kaydedildi.")
+                self.process_single_entry(entry)
+                print(f"Veri işlendi: {entry.get('visa_type_id')}, {entry.get('appointment_date')}")
             except Exception as e:
-                print(f"POSTGRESQL: Response ID {response_id} işlenirken hata: {e}")
+                print(f"Bir kayıt işlenirken hata oluştu: {e}")
 
     def process_single_entry(self, entry):
         """
@@ -80,4 +66,15 @@ class ResponseProcessor:
         """
         datas = self.db.postgreDb.fetch_unprocessed_responses()
         for data in datas:
-            self.process_unprocessed_responses([data])
+            response_id, timestamp, response_data = data
+            if isinstance(response_data, str):
+                try:
+                    response_data = json.loads(response_data)
+                except json.JSONDecodeError:
+                    print(f"Response ID {response_id}: JSON verisi çözülürken hata.")
+                    continue
+            elif not isinstance(response_data, list):
+                print(f"Response ID {response_id}: Beklenmeyen response_data türü: {type(response_data)}")
+                continue
+
+            self.process_unprocessed_responses(response_data)
