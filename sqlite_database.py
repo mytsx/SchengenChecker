@@ -165,42 +165,40 @@ class SQLiteDatabase:
                                         visa_category, visa_subcategory, source_country,
                                         mission_country):
         """
-        Check or create a unique appointment in the SQLite database.
+        SQLite üzerinde benzersiz bir randevu kaydı oluşturur veya mevcut kaydı kontrol eder.
         """
         try:
-            conn = self.connect()  # SQLite bağlantısı
+            conn = self.connect()
             cursor = conn.cursor()
 
-            # Mevcut kaydı kontrol et
+            # Tek sorguda kontrol ve ekleme (UPSERT gibi)
+            query_upsert = """
+            INSERT INTO unique_appointments (
+                center_name, visa_type_id, visa_category, visa_subcategory,
+                source_country, mission_country, book_now_link
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT DO NOTHING;
+            """
+            cursor.execute(query_upsert, (center_name, visa_type_id, visa_category, visa_subcategory,
+                                        source_country, mission_country, book_now_link))
+            conn.commit()
+
+            # Eğer ekleme yapılmadıysa mevcut kaydı döndür
             query_select = """
             SELECT id FROM unique_appointments
             WHERE visa_type_id = ? 
             AND center_name = ? 
             AND book_now_link = ?
-            AND visa_category = ?
-            AND visa_subcategory = ?
-            AND source_country = ?
+            AND visa_category = ? 
+            AND visa_subcategory = ? 
+            AND source_country = ? 
             AND mission_country = ?
             """
             cursor.execute(query_select, (visa_type_id, center_name, book_now_link, visa_category,
                                         visa_subcategory, source_country, mission_country))
             row = cursor.fetchone()
 
-            if row:
-                return row[0]  # Mevcut ID'yi döndür
-
-            # Yeni kayıt ekle
-            query_insert = """
-            INSERT INTO unique_appointments (
-                center_name, visa_type_id, visa_category, visa_subcategory,
-                source_country, mission_country, book_now_link
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            """
-            cursor.execute(query_insert, (center_name, visa_type_id, visa_category, visa_subcategory,
-                                        source_country, mission_country, book_now_link))
-            conn.commit()
-            return cursor.lastrowid  # Yeni eklenen kaydın ID'sini döndür
-
+            return row[0] if row else None
         except Exception as e:
             print(f"SQLite fetch_or_create_unique_appointment error: {e}")
             return None
@@ -209,59 +207,46 @@ class SQLiteDatabase:
             conn.close()
 
 
+
     def insert_appointment_log(self, data):
         """
-        Appointment log kaydını appointment_logs tablosuna ekler.
-
+        PostgreSQL'den gelen başarılı ekleme sonucuna göre SQLite üzerinde de appointment log kaydını ekler.
+        
         Args:
             data (dict): Log verisi.
         """
         try:
-            conn = self.connect()  # SQLite bağlantısı
-            cursor = conn.cursor()
+            # PostgreSQL'de log ekleme
+            postgres_id = self.postgreDb.insert_appointment_log(data)
 
-            # Aynı kayıt var mı kontrol et
-            query_check = """
-            SELECT id FROM appointment_logs
-            WHERE unique_appointment_id = ? 
-            AND appointment_date = ? 
-            AND people_looking = ? 
-            AND last_checked = ?;
-            """
-            cursor.execute(query_check, (
-                data.get("unique_appointment_id"),
-                data.get("appointment_date"),
-                data.get("people_looking"),
-                data.get("last_checked")
-            ))
-            existing_log = cursor.fetchone()
+            # Eğer PostgreSQL başarılı bir şekilde kayıt eklediyse SQLite'a da ekle
+            if postgres_id:
+                timestamp = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-            if existing_log:
-                print(f"Log already exists with ID: {existing_log[0]}")
-                return  # Kayıt zaten mevcut, ekleme yapılmaz
+                # SQLite'a direkt ekleme
+                conn = self.sqliteDb.connect()  # SQLite bağlantısı
+                cursor = conn.cursor()
 
-            timestamp = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
-            # Yeni kayıt ekle
-            query_insert = """
-            INSERT INTO appointment_logs (
-                unique_appointment_id, timestamp, appointment_date, people_looking, last_checked
-            ) VALUES (?, ?, ?, ?, ?)
-            """
-            cursor.execute(query_insert, (
-                data.get("unique_appointment_id"),
-                timestamp,
-                data.get("appointment_date"),
-                data.get("people_looking"),
-                data.get("last_checked")
-            ))
-            conn.commit()
+                query_insert = """
+                INSERT INTO appointment_logs (
+                    unique_appointment_id, timestamp, appointment_date, people_looking, last_checked
+                ) VALUES (?, ?, ?, ?, ?)
+                """
+                cursor.execute(query_insert, (
+                    data.get("unique_appointment_id"),
+                    timestamp,
+                    data.get("appointment_date"),
+                    data.get("people_looking"),
+                    data.get("last_checked")
+                ))
+                conn.commit()
 
         except Exception as e:
-            print(f"SQLite insert_appointment_log error: {e}")
+            print(f"Error in insert_appointment_log: {e}")
         finally:
             cursor.close()
             conn.close()
+
 
 
 

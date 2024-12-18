@@ -126,69 +126,72 @@ class PostgresDatabase:
             conn.close()
 
     def fetch_or_create_unique_appointment(self,
-                                           visa_type_id,
-                                           center_name,
-                                           book_now_link,
-                                           visa_category,
-                                           visa_subcategory,
-                                           source_country,
-                                           mission_country,
-                                           appointment_date=None):
+                                        visa_type_id,
+                                        center_name,
+                                        book_now_link,
+                                        visa_category,
+                                        visa_subcategory,
+                                        source_country,
+                                        mission_country,
+                                        appointment_date=None):
         """
-        Check or create a unique appointment in PostgreSQL.
+        Check or create a unique appointment in PostgreSQL using UPSERT.
         """
         try:
             conn = self.connect()
             cursor = conn.cursor()
 
-            # Check for existing entry
-            query_select = """
-            SELECT id FROM unique_appointments
-            WHERE visa_type_id = %s 
-            AND center_name = %s 
-            AND book_now_link = %s
-            AND visa_category = %s
-            AND visa_subcategory = %s
-            AND source_country = %s
-            AND mission_country = %s
-            """
-            cursor.execute(query_select, (visa_type_id, center_name, book_now_link, visa_category,
-                                        visa_subcategory, source_country, mission_country))
-
-            row = cursor.fetchone()
-
-            if row:
-                return row[0]  # Return existing ID
-
-            # Insert new record
-            query_insert = """
+            # UPSERT sorgusu
+            query_upsert = """
             INSERT INTO unique_appointments (
-                center_name, visa_type_id, visa_category, visa_subcategory,
+                visa_type_id, center_name, visa_category, visa_subcategory,
                 source_country, mission_country, book_now_link
             ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
+            ON CONFLICT ON CONSTRAINT unique_visa_appointment DO NOTHING
+            RETURNING id;
             """
             cursor.execute(
-                query_insert,
-                (center_name, visa_type_id, visa_category, visa_subcategory,
-                 source_country, mission_country, book_now_link))
-            conn.commit()
-
-            appointment_date_text = f"\n- Appointment Date: {appointment_date}" if appointment_date else ""
-            message = (
-                f"🆕 New Appointment Added:\n- Center: {center_name}\n- Category: {visa_category}\n"
-                f"- Subcategory: {visa_subcategory}\n- Source: {source_country}\n"
-                f"- Destination: {mission_country}{appointment_date_text}")
-
-            return cursor.fetchone()[0]  # Return new ID
-        except Exception as e:
-            print(
-                f"Error creating or fetching unique appointment in PostgreSQL: {e}"
+                query_upsert,
+                (visa_type_id, center_name, visa_category, visa_subcategory,
+                source_country, mission_country, book_now_link)
             )
+
+            # Eğer yeni bir kayıt oluşturulmadıysa, mevcut ID'yi sorgula
+            row = cursor.fetchone()
+            if not row:
+                query_select = """
+                SELECT id FROM unique_appointments
+                WHERE visa_type_id = %s 
+                AND center_name = %s 
+                AND book_now_link = %s
+                AND visa_category = %s
+                AND visa_subcategory = %s
+                AND source_country = %s
+                AND mission_country = %s
+                """
+                cursor.execute(query_select, (visa_type_id, center_name, book_now_link,
+                                            visa_category, visa_subcategory,
+                                            source_country, mission_country))
+                row = cursor.fetchone()
+
+            # Telegram mesajını oluştur
+            if row:
+                appointment_id = row[0]
+                appointment_date_text = f"\n- Appointment Date: {appointment_date}" if appointment_date else ""
+                message = (
+                    f"🆕 Appointment Processed:\n- Center: {center_name}\n- Category: {visa_category}\n"
+                    f"- Subcategory: {visa_subcategory}\n- Source: {source_country}\n"
+                    f"- Destination: {mission_country}{appointment_date_text}")
+                self.telegramBot.send_message(message)
+                return appointment_id
+
+        except Exception as e:
+            print(f"Error creating or fetching unique appointment in PostgreSQL: {e}")
             return None
         finally:
             cursor.close()
             conn.close()
+
 
     def insert_appointment_log(self, data):
         """
@@ -198,71 +201,64 @@ class PostgresDatabase:
             data (dict): Log verisi.
         """
         try:
-            conn = self.connect()
-            cursor = conn.cursor()
+            with self.connect() as conn:
+                with conn.cursor() as cursor:
+                    # Tek sorguda kontrol ve ekleme (UPSERT)
+                    query_upsert = """
+                    INSERT INTO appointment_logs (
+                        unique_appointment_id, timestamp, appointment_date, people_looking, last_checked
+                    ) VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT ON CONSTRAINT unique_appointment_log DO NOTHING
+                    RETURNING id;
+                    """
+                    timestamp = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                    cursor.execute(query_upsert, (
+                        data.get("unique_appointment_id"),
+                        timestamp,
+                        data.get("appointment_date"),
+                        data.get("people_looking"),
+                        data.get("last_checked")
+                    ))
+                    conn.commit()
 
-            # Önce aynı kayıt var mı kontrol et
-            query_check = """
-            SELECT id FROM appointment_logs
-            WHERE unique_appointment_id = %s 
-            AND appointment_date = %s 
-            AND people_looking = %s 
-            AND last_checked = %s;
-            """
-            cursor.execute(query_check, (
-                data.get("unique_appointment_id"),
-                data.get("appointment_date"),
-                data.get("people_looking"),
-                data.get("last_checked")
-            ))
-            existing_log = cursor.fetchone()
+                    # Eklenen logun ID'sini al
+                    inserted_id = cursor.fetchone()
 
-            if existing_log:
-                print(f"Log already exists with ID: {existing_log[0]}")
-                return  # Aynı kayıt varsa ekleme yapma
+                    if not inserted_id:
+                        print(f"Log zaten mevcut: unique_appointment_id={data.get('unique_appointment_id')}")
+                        return None
+                    else:
+                        inserted_id = inserted_id[0]
+                        print(f"Log başarıyla eklendi: unique_appointment_id={data.get('unique_appointment_id')}")
 
-            timestamp = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                    # Telegram mesajı için gerekli veriyi çek
+                    query_fetch = """
+                    SELECT ua.center_name, ua.visa_category, ua.visa_subcategory,
+                        ua.source_country, ua.mission_country, al.appointment_date
+                    FROM unique_appointments ua
+                    JOIN appointment_logs al ON ua.id = al.unique_appointment_id
+                    WHERE ua.id = %s 
+                    ORDER BY al.last_checked DESC LIMIT 1;
+                    """
+                    cursor.execute(query_fetch, (data.get("unique_appointment_id"),))
+                    appointment = cursor.fetchone()
 
-            # Eğer kayıt yoksa, ekle
-            query_insert = """
-            INSERT INTO appointment_logs (
-                unique_appointment_id, timestamp, appointment_date, people_looking, last_checked
-            ) VALUES (%s, %s, %s, %s, %s)
-            """
-            cursor.execute(query_insert, (
-                data.get("unique_appointment_id"),
-                timestamp,
-                data.get("appointment_date"),
-                data.get("people_looking"),
-                data.get("last_checked")
-            ))
-            conn.commit()
-
-            # Telegram mesajını gönder
-            query_fetch = """
-            SELECT ua.center_name, ua.visa_category, ua.visa_subcategory,
-                ua.source_country, ua.mission_country, al.appointment_date
-            FROM unique_appointments ua
-            JOIN appointment_logs al ON ua.id = al.unique_appointment_id
-            WHERE ua.id = %s 
-            ORDER BY al.last_checked DESC LIMIT 1
-            """
-            cursor.execute(query_fetch, (data.get("unique_appointment_id"),))
-            appointment = cursor.fetchone()
-
-            if appointment:
-                center_name, visa_category, visa_subcategory, source_country, mission_country, appointment_date = appointment
-                message = (
-                    f"🔄 Appointment Log Updated:\n- Center: {center_name}\n- Category: {visa_category}\n"
-                    f"- Subcategory: {visa_subcategory}\n- Source: {source_country}\n"
-                    f"- Destination: {mission_country}\n- Appointment Date: {appointment_date}"
-                )
-
+                    if appointment:
+                        center_name, visa_category, visa_subcategory, source_country, mission_country, appointment_date = appointment
+                        message = (
+                            f"🔄 Appointment Log Updated:\n"
+                            f"- Center: {center_name}\n"
+                            f"- Category: {visa_category}\n"
+                            f"- Subcategory: {visa_subcategory}\n"
+                            f"- Source: {source_country}\n"
+                            f"- Destination: {mission_country}\n"
+                            f"- Appointment Date: {appointment_date}"
+                        )
+                        self.telegramBot.send_message(message)
+                        
+                    return inserted_id
         except Exception as e:
             print(f"PostgreSQL'e log ekleme sırasında hata: {e}")
-        finally:
-            cursor.close()
-            conn.close()
 
 
     def _process_response_for_appointments(self, response_data):
