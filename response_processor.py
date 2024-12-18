@@ -1,12 +1,11 @@
 import json
-from database import Database
 
 class ResponseProcessor:
-    def __init__(self):
+    def __init__(self, db):
         """
         ResponseProcessor sınıfını başlatır ve Database nesnesini oluşturur.
         """
-        self.db = Database()
+        self.db = db
 
     def process_unprocessed_responses(self, data):
         """
