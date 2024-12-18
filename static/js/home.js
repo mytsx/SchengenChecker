@@ -56,9 +56,37 @@ function fetchAppointments() {
                         { data: "visa_subcategory", defaultContent: "-" },
                         { data: "source_country", defaultContent: "-" },
                         { data: "mission_country", defaultContent: "-" },
-                        { data: "appointment_date", defaultContent: "N/A" },
-                        { data: "last_checked", defaultContent: "N/A" },
-                        { data: "people_looking", defaultContent: 0 }
+                        {
+                            data: "appointment_date",
+                            render: function (data) {
+                                return formatDate(data);
+                            },
+                            defaultContent: "N/A"
+                        },
+                        {
+                            data: "last_checked",
+                            render: function (data) {
+                                return formatDateTime(data);
+                            },
+                            defaultContent: "N/A"
+                        },
+                        { data: "people_looking", defaultContent: 0 },
+                        {
+                            data: "book_now_link",
+                            render: function (data) {
+                                return `<a href="${data}" target="_blank" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>`;
+                            }
+                        },
+                        {
+                            data: "unique_appointment_id",
+                            render: function (data) {
+                                return `<button class="btn btn-secondary btn-sm" onclick="viewLogs(${data})">
+                                            <i class="bi bi-journal-text"></i>
+                                        </button>`;
+                            }
+                        }
                     ],
                     responsive: true,
                     pageLength: 10,
@@ -107,4 +135,61 @@ function updateFilterOptions(data) {
             $(this).autocomplete("search", "");
         });
     });
+}
+
+
+function viewLogs(appointmentId) {
+    fetch(`/logs_modal?appointment_id=${appointmentId}`)
+        .then(response => response.text())
+        .then(htmlContent => {
+            // Yeni modal oluştur
+            const modalHtml = `
+                <div class="modal fade" id="dynamicLogsModal" tabindex="-1" aria-labelledby="dynamicLogsModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            ${htmlContent}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Modal'ı DOM'a ekle
+            document.body.insertAdjacentHTML("beforeend", modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById("dynamicLogsModal"));
+            modal.show();
+
+            // Modal kapandıktan sonra DOM'dan kaldır
+            document.getElementById("dynamicLogsModal").addEventListener("hidden.bs.modal", () => {
+                document.getElementById("dynamicLogsModal").remove();
+            });
+        })
+        .catch(err => console.error("Error loading logs modal:", err));
+}
+
+
+// Tarih formatlama fonksiyonu (sadece tarih)
+function formatDate(dateString) {
+    if (!dateString) return "N/A";
+
+    const date = new Date(dateString); // Tarih objesine çevir
+    const options = { day: "2-digit", month: "2-digit", year: "numeric" };
+    return new Intl.DateTimeFormat("tr-TR", options).format(date);
+}
+
+
+// Tarih formatlama fonksiyonu (tarih + saat)
+function formatDateTime(dateString) {
+    if (!dateString) return "N/A";
+
+    const date = new Date(dateString); // Tarih objesine çevir
+    const options = { 
+        day: "2-digit", 
+        month: "2-digit", 
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+    };
+    return new Intl.DateTimeFormat("tr-TR", options).format(date);
 }

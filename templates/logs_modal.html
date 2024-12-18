@@ -1,0 +1,26 @@
+<div class="modal-header">
+    <h5 class="modal-title">Appointment Logs</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Appointment Date</th>
+                <th>Center Name</th>
+                <th>People Looking</th>
+                <th>Last Checked</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.appointment_date }}</td>
+                <td>{{ log.center_name }}</td>
+                <td>{{ log.people_looking }}</td>
+                <td>{{ log.last_checked }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

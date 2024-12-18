@@ -84,7 +84,7 @@ class SchengenCheckerApp:
             query = """
             SELECT ua.id AS unique_appointment_id, ua.center_name, ua.visa_category, ua.visa_subcategory,
                    ua.source_country, ua.mission_country, MAX(al.appointment_date), MAX(al.last_checked), 
-                   MAX(al.people_looking)
+                   MAX(al.people_looking), ua.book_now_link
             FROM unique_appointments ua
             LEFT JOIN appointment_logs al ON ua.id = al.unique_appointment_id
             WHERE 1=1
@@ -125,7 +125,8 @@ class SchengenCheckerApp:
                     "mission_country": row[5],
                     "appointment_date": row[6],
                     "last_checked": row[7],
-                    "people_looking": row[8]
+                    "people_looking": row[8],
+                     "book_now_link": row[9],
                 } for row in rows]
                 return jsonify(data)
             except Exception as e:
@@ -171,6 +172,81 @@ class SchengenCheckerApp:
             except Exception as e:
                 print(f"Error fetching logs: {e}")
                 return jsonify({"error": "Failed to fetch logs"}), 500
+            finally:
+                cursor.close()
+                conn.close()
+
+        @self.flask_app.route("/get_logs_for_appointment", methods=["GET"])
+        def get_logs_for_appointment():
+            """
+            Belirtilen randevu için son 100 log kaydını döner.
+            """
+            appointment_id = request.args.get("appointment_id")
+
+            query = """
+            SELECT DISTINCT ON (al.appointment_date) al.appointment_date, ua.center_name, al.people_looking, al.last_checked
+            FROM appointment_logs al
+            JOIN unique_appointments ua ON al.unique_appointment_id = ua.id
+            WHERE al.unique_appointment_id = %s and al.appointment_date is not null
+            ORDER BY al.appointment_date 
+            """
+
+            try:
+                conn = self.db.postgreDb.connect()
+                cursor = conn.cursor()
+                cursor.execute(query, (appointment_id,))
+                rows = cursor.fetchall()
+
+                data = [{
+                    "appointment_date": row[0],
+                    "center_name": row[1],
+                    "people_looking": row[2],
+                    "last_checked": row[3],
+                } for row in rows]
+
+                return jsonify(data)
+            except Exception as e:
+                print(f"Error fetching logs for appointment: {e}")
+                return jsonify({"error": "Failed to fetch logs"}), 500
+            finally:
+                cursor.close()
+                conn.close()
+
+
+        @self.flask_app.route("/logs_modal", methods=["GET"])
+        def logs_modal():
+            """
+            Belirtilen randevu için logları render eden modal içeriğini döner.
+            """
+            appointment_id = request.args.get("appointment_id")
+
+            query = """
+            SELECT DISTINCT ON (al.appointment_date) al.appointment_date, ua.center_name, al.people_looking, al.last_checked
+            FROM appointment_logs al
+            JOIN unique_appointments ua ON al.unique_appointment_id = ua.id
+            WHERE al.unique_appointment_id = %s AND al.appointment_date IS NOT NULL
+            ORDER BY al.appointment_date desc
+            """
+
+            try:
+                conn = self.db.postgreDb.connect()
+                cursor = conn.cursor()
+                cursor.execute(query, (appointment_id,))
+                rows = cursor.fetchall()
+
+                # Log verilerini listeye dönüştür
+                logs = [{
+                    "appointment_date": row[0].strftime("%d.%m.%Y, %a"),
+                    "center_name": row[1],
+                    "people_looking": row[2],
+                    "last_checked": row[3].strftime("%d.%m.%Y %H:%M:%S")
+                } for row in rows]
+
+                return render_template("logs_modal.html", logs=logs)
+
+            except Exception as e:
+                print(f"Error fetching logs for appointment: {e}")
+                return "<p>Error fetching logs</p>", 500
             finally:
                 cursor.close()
                 conn.close()
