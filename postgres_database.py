@@ -72,6 +72,7 @@ class PostgresDatabase:
         """Logs data into a PostgreSQL table and triggers additional actions for `responses`."""
         tz = pytz.timezone("Europe/Istanbul")
         timestamp = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+        inserted_id = None
         try:
             conn = self.connect()
             cursor = conn.cursor()
