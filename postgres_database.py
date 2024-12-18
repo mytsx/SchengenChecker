@@ -178,11 +178,16 @@ class PostgresDatabase:
             if row:
                 conn.commit()  # Yeni kayıt oluşturulduysa commit yap
                 appointment_id = row[0]
-                appointment_date_text = f"\n- Appointment Date: {appointment_date}" if appointment_date else ""
+                appointment_date_text = f"🗓️ Randevu Tarihi: {appointment_date}" if appointment_date else "🗓️ Randevu Tarihi Henüz Belirtilmedi"
                 message = (
-                    f"🆕 Appointment Processed:\n- Center: {center_name}\n- Category: {visa_category}\n"
-                    f"- Subcategory: {visa_subcategory}\n- Source: {source_country}\n"
-                    f"- Destination: {mission_country}{appointment_date_text}")
+                    f"🎉 Yeni Randevu İşlendi:\n"
+                    f"📍 Başvuru Merkezi: {center_name}\n"
+                    f"📋 Kategori: {visa_category}\n"
+                    f"🔖 Alt Kategori: {visa_subcategory}\n"
+                    f"🌍 Kaynak Ülke: {source_country}\n"
+                    f"✈️ Hedef Ülke: {mission_country}\n"
+                    f"{appointment_date_text}"
+                )
                 self.telegramBot.send_message(message)
 
                 return appointment_id
@@ -272,16 +277,20 @@ class PostgresDatabase:
 
                     if appointment:
                         center_name, visa_category, visa_subcategory, source_country, mission_country, appointment_date = appointment
-                        message = (
-                            f"🔄 Appointment Log Updated:\n"
-                            f"- Center: {center_name}\n"
-                            f"- Category: {visa_category}\n"
-                            f"- Subcategory: {visa_subcategory}\n"
-                            f"- Source: {source_country}\n"
-                            f"- Destination: {mission_country}\n"
-                            f"- Appointment Date: {appointment_date}"
-                        )
-                        self.telegramBot.send_message(message)
+                        if appointment_date:  
+                            message = (
+                                f"✅ Randevu Güncellendi:\n"
+                                f"📍 Başvuru Merkezi: {center_name}\n"
+                                f"📋 Kategori: {visa_category}\n"
+                                f"🔖 Alt Kategori: {visa_subcategory}\n"
+                                f"🌍 Kaynak Ülke: {source_country}\n"
+                                f"✈️ Hedef Ülke: {mission_country}\n"
+                                f"🗓️ Randevu Tarihi: {appointment_date}"
+                            )
+                            self.telegramBot.send_message(message)
+                        else:
+                            print("Appointment date not available, skipping Telegram notification.")
+
                         
                     return inserted_id
         except Exception as e:
