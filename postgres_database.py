@@ -36,7 +36,12 @@ class PostgresDatabase:
             conn.close()
             return schema
         except Exception as e:
-            print(f"PostgreSQL'den şema alınırken hata: {e}")
+            error_message = f"Şema alınırken hata: {e}"
+            print(error_message)
+            self.log_error_to_db(
+                error_message=error_message,
+                source_function="get_table_schema",
+            )
             return []
 
     def get_all_table_names(self):
@@ -55,7 +60,12 @@ class PostgresDatabase:
             conn.close()
             return tables
         except Exception as e:
-            print(f"PostgreSQL'den tablo isimleri alınırken hata: {e}")
+            error_message = f"Tablo isimleri alınırken hata: {e}"
+            print(error_message)
+            self.log_error_to_db(
+                error_message=error_message,
+                source_function="get_all_table_names",
+            )
             return []
 
     def log_to_table(self, table_name, data):
@@ -80,7 +90,13 @@ class PostgresDatabase:
                 conn.commit()
 
         except Exception as e:
-            print(f"PostgreSQL'e kayıt sırasında hata: {e}")
+            error_message = f"Log kaydı sırasında hata: {e}"
+            print(error_message)
+            self.log_error_to_db(
+                error_message=error_message,
+                source_function="log_to_table",
+                additional_data=data
+            )
         finally:
             cursor.close()
             conn.close()
@@ -116,7 +132,12 @@ class PostgresDatabase:
 
             return response_list
         except Exception as e:
-            print(f"Error fetching responses from PostgreSQL: {e}")
+            error_message = f"Error fetching responses: {e}"
+            print(error_message)
+            self.log_error_to_db(
+                error_message=error_message,
+                source_function="fetch_responses_from_postgres",
+            )
             return []
         finally:
             cursor.close()
@@ -183,7 +204,12 @@ class PostgresDatabase:
                 return appointment_id
 
         except Exception as e:
-            print(f"Error creating or fetching unique appointment in PostgreSQL: {e}")
+            error_message = f"Error creating or fetching unique appointment: {e}"
+            print(error_message)
+            self.log_error_to_db(
+                error_message=error_message,
+                source_function="fetch_or_create_unique_appointment",
+            )
             return None
         finally:
             cursor.close()
@@ -255,51 +281,14 @@ class PostgresDatabase:
                         
                     return inserted_id
         except Exception as e:
-            print(f"PostgreSQL'e log ekleme sırasında hata: {e}")
+            error_message = f"Appointment log'u ekleme sırasında hata: {e}"
+            print(error_message)
+            self.log_error_to_db(
+                error_message=error_message,
+                source_function="insert_appointment_log",
+                additional_data=data
+            )
 
-
-    def _process_response_for_appointments(self, response_data):
-        """Processes a response entry and logs data into unique_appointments and appointment_logs."""
-        try:
-            # Parse JSON response if necessary
-            if isinstance(response_data, str):
-                response_data = json.loads(response_data)
-
-            for entry in response_data:
-                visa_type_id = entry.get("visa_type_id")
-                appointment_date = entry.get("appointment_date")
-                center_name = entry.get("center_name")
-                book_now_link = entry.get("book_now_link")
-
-                # Skip entries with missing critical data
-                if not visa_type_id or not center_name or not book_now_link:
-                    continue
-
-                # Check or create a unique appointment
-                unique_appointment_id = self.fetch_or_create_unique_appointment(
-                    visa_type_id=visa_type_id,
-                    center_name=center_name,
-                    book_now_link=book_now_link,
-                    visa_category=entry.get("visa_category", "Bilinmiyor"),
-                    visa_subcategory=entry.get("visa_subcategory",
-                                               "Bilinmiyor"),
-                    source_country=entry.get("source_country", "Bilinmiyor"),
-                    mission_country=entry.get("mission_country", "Bilinmiyor"))
-
-                # Log to appointment_logs if a unique appointment is found or created
-                if unique_appointment_id:
-                    self.insert_appointment_log({
-                        "unique_appointment_id":
-                        unique_appointment_id,
-                        "appointment_date":
-                        appointment_date,
-                        "people_looking":
-                        entry.get("people_looking", 0),
-                        "last_checked":
-                        entry.get("last_checked", None)
-                    })
-        except Exception as e:
-            print(f"Error processing responses for appointments: {e}")
 
     def insert_processed_response(self, response_id, timestamp):
         """
@@ -316,7 +305,12 @@ class PostgresDatabase:
             cursor.execute(query, (response_id, timestamp, processed_at))
             conn.commit()
         except Exception as e:
-            print(f"PostgreSQL: Processed response eklenirken hata: {e}")
+            error_message = f"Processed response eklenirken hata: {e}"
+            print(error_message)
+            self.log_error_to_db(
+                error_message=error_message,
+                source_function="insert_processed_response",
+            )
         finally:
             cursor.close()
             conn.close()
@@ -338,8 +332,11 @@ class PostgresDatabase:
             rows = cursor.fetchall()
             return rows
         except Exception as e:
-            print(
-                f"PostgreSQL: İşlenmeyen responses kayıtları çekilirken hata: {e}"
+            error_message = f"İşlenmeyen responses kayıtları çekilirken hata: {e}"
+            print(error_message)
+            self.log_error_to_db(
+                error_message=error_message,
+                source_function="fetch_unprocessed_responses",
             )
             return []
         finally:
@@ -357,10 +354,43 @@ class PostgresDatabase:
             rows = cursor.fetchall()
             return rows
         except Exception as e:
-            print(
-                f"PostgreSQL: {table_name} tablosundan veri çekilirken hata: {e}"
+            error_message = f"{table_name} tablosundan veri çekilirken hata: {e}"
+            print(error_message)
+            self.log_error_to_db(
+                error_message=error_message,
+                source_function="fetch_all_data",
             )
             return []
+        finally:
+            cursor.close()
+            conn.close()
+
+    def log_error_to_db(self, error_message, source_function=None, additional_data=None):
+        """
+        Hataları error_logs tablosuna yazar.
+
+        Args:
+            error_message (str): Hata mesajı.
+            source_function (str): Hatanın oluştuğu fonksiyon adı.
+            additional_data (dict): Ek veri (isteğe bağlı).
+        """
+        try:
+            class_name = self.__class__.__name__
+            full_message = f"[{class_name}] {error_message}"
+            conn = self.connect()
+            cursor = conn.cursor()
+            query = """
+            INSERT INTO error_logs (error_message, source_function, additional_data)
+            VALUES (%s, %s, %s);
+            """
+            cursor.execute(query, (
+                full_message,
+                source_function,
+                json.dumps(additional_data) if additional_data else None
+            ))
+            conn.commit()
+        except Exception as e:
+            print(f"Error logging to error_logs: {e}")
         finally:
             cursor.close()
             conn.close()

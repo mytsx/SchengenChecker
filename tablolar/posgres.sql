@@ -89,3 +89,12 @@ ALTER TABLE unique_appointments DROP CONSTRAINT unique_visa_appointment;
 
 ALTER TABLE unique_appointments ADD CONSTRAINT unique_visa_appointment
 UNIQUE (visa_type_id, center_name, visa_category, visa_subcategory, source_country, mission_country);
+
+
+CREATE TABLE error_logs (
+    id SERIAL PRIMARY KEY,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    error_message TEXT NOT NULL,
+    source_function TEXT,
+    additional_data JSONB
+);
