@@ -1,4 +1,6 @@
 import json
+from datetime import datetime
+import pytz
 class ResponseProcessor:
     def __init__(self, db ):
         """
@@ -78,3 +80,6 @@ class ResponseProcessor:
                 continue
 
             self.process_unprocessed_responses(response_data)
+            tz = pytz.timezone("Europe/Istanbul")
+            timestamp = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+            self.db.insert_processed_response(response_id, timestamp)

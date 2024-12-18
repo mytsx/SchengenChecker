@@ -81,13 +81,14 @@ class PostgresDatabase:
                 cursor.execute(
                     f"INSERT INTO {table_name} (timestamp, response) VALUES (%s, %s)",
                     (timestamp, json.dumps(data)))
-                conn.commit()
 
             elif table_name in ["logs", "appointments"]:
                 cursor.execute(
                     f"INSERT INTO {table_name} (timestamp, message) VALUES (%s, %s)",
                     (timestamp, data))
-                conn.commit()
+            
+            inserted_id = cursor.fetchone()[0]
+            conn.commit()
 
         except Exception as e:
             error_message = f"Log kaydı sırasında hata: {e}"
@@ -100,6 +101,8 @@ class PostgresDatabase:
         finally:
             cursor.close()
             conn.close()
+        
+        return inserted_id
 
     def fetch_responses_from_postgres(self, limit=500):
         """
@@ -188,7 +191,7 @@ class PostgresDatabase:
                     f"✈️ Hedef Ülke: {mission_country}\n"
                     f"{appointment_date_text}"
                 )
-                self.telegramBot.send_message(message)
+                #self.telegramBot.send_message(message)
 
                 return appointment_id
 
@@ -287,7 +290,7 @@ class PostgresDatabase:
                                 f"✈️ Hedef Ülke: {mission_country}\n"
                                 f"🗓️ Randevu Tarihi: {appointment_date}"
                             )
-                            self.telegramBot.send_message(message)
+                            #self.telegramBot.send_message(message)
                         else:
                             print("Appointment date not available, skipping Telegram notification.")
 

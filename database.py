@@ -1,6 +1,8 @@
 from postgres_database import PostgresDatabase
 from sqlite_database import SQLiteDatabase
 from response_processor import ResponseProcessor
+from datetime import datetime
+import pytz
 
 class Database:
 
@@ -14,11 +16,14 @@ class Database:
         Veriyi hem PostgreSQL hem de SQLite veritabanlarına loglar.
         Eğer 'responses' tablosuna log eklenirse, işlem sonrası response'u işler.
         """
-        self.postgreDb.log_to_table(table_name, data)
+        inserted_id = self.postgreDb.log_to_table(table_name, data)
         self.sqliteDb.log_to_table(table_name, data)
 
         if table_name == "responses":
             self.responseProcessor.process_unprocessed_responses(data)
+            tz = pytz.timezone("Europe/Istanbul")
+            timestamp = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+            self.insert_processed_response(inserted_id, timestamp)
 
     def fetch_table_data(self, table_name, limit=10, json_column=False):
         return self.sqliteDb.fetch_table_data(table_name, limit, json_column)
@@ -83,3 +88,7 @@ class Database:
     def insert_processed_response(self, response_id, timestamp):
         self.postgreDb.insert_processed_response(response_id, timestamp)
         self.sqliteDb.insert_processed_response(response_id, timestamp)
+
+if __name__ == "__main__":
+    db = Database()
+    db.responseProcessor.process_all_unprocessed_responses()
