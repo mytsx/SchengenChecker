@@ -80,12 +80,12 @@ class PostgresDatabase:
             # Insert data into the specified table
             if table_name == "responses":
                 cursor.execute(
-                    f"INSERT INTO {table_name} (timestamp, response) VALUES (%s, %s)",
+                    f"INSERT INTO {table_name} (timestamp, response) VALUES (%s, %s) RETURNING id",
                     (timestamp, json.dumps(data)))
 
             elif table_name in ["logs", "appointments"]:
                 cursor.execute(
-                    f"INSERT INTO {table_name} (timestamp, message) VALUES (%s, %s)",
+                    f"INSERT INTO {table_name} (timestamp, message) VALUES (%s, %s) RETURNING id",
                     (timestamp, data))
             
             inserted_id = cursor.fetchone()[0]
@@ -192,7 +192,7 @@ class PostgresDatabase:
                     f"✈️ Hedef Ülke: {mission_country}\n"
                     f"{appointment_date_text}"
                 )
-                self.telegramBot.send_message(message)
+                #self.telegramBot.send_message(message)
 
                 return appointment_id
 
@@ -291,7 +291,7 @@ class PostgresDatabase:
                                 f"✈️ Hedef Ülke: {mission_country}\n"
                                 f"🗓️ Randevu Tarihi: {appointment_date}"
                             )
-                            self.telegramBot.send_message(message)
+                            #self.telegramBot.send_message(message)
                         else:
                             print("Appointment date not available, skipping Telegram notification.")
 
