@@ -192,7 +192,7 @@ class PostgresDatabase:
                     f"✈️ Hedef Ülke: {mission_country}\n"
                     f"{appointment_date_text}"
                 )
-                #self.telegramBot.send_message(message)
+                self.telegramBot.send_message(message)
 
                 return appointment_id
 
@@ -291,7 +291,7 @@ class PostgresDatabase:
                                 f"✈️ Hedef Ülke: {mission_country}\n"
                                 f"🗓️ Randevu Tarihi: {appointment_date}"
                             )
-                            #self.telegramBot.send_message(message)
+                            self.telegramBot.send_message(message)
                         else:
                             print("Appointment date not available, skipping Telegram notification.")
 
